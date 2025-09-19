@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./baseball_app/api/venv/Lib/site-packages"
+    ]
+}
