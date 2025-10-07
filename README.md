@@ -74,3 +74,21 @@ which should return the current time. You will also be able to see this time dis
 However! When I tried to do this, I got an error because Pylance didn't recognize the **flask** import in the api.py file. This problem is explained [here](https://gist.github.com/krisbolton/20159d66f1d919c9c2380c96b6ac3915) and I was eventually able to fix it in vs code, although by a slightly different process than what was outlined in the article I found. 
 
 Everything else is already included in the git project, so if you did all the steps you should be ready to go! However, if you run into any issues, the original tutorial I used to create the environment is [here](https://blog.miguelgrinberg.com/post/create-a-react-flask-project-in-2025), or email me (Bridget) at bng19@case.edu if you have any questions. 
+
+**An Amendment**
+
+Not sure if something changed or if I just forgot to add these details, but if you are having some issues running the backend, try this once the environment is setup:
+
+`cd baseball_app`
+
+`cd api`
+
+Activate your python environment using `venv\Scripts\activate` or `source venv/bin/activate`
+
+Now, you can either use (`npm run api`) or (`cd venv` AND `flask run`)
+
+As for running the frontend, it does not require the python environment. In a separate terminal, simply do:
+
+`cd baseball_app`
+
+`npm run dev`
