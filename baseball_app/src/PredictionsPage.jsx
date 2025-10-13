@@ -38,6 +38,46 @@ const rows = [
     level: 'AA',
     position: 'SS',
   },
+  {
+    id: 4,
+    playerName: 'Josue Briceño',
+    team: 'Erie Seawolves',
+    age: 21,
+    level: 'AA',
+    position: '1B',
+  },
+  {
+    id: 5,
+    playerName: 'Travis Bazzana',
+    team: 'Columbus Clippers',
+    age: 23,
+    level: 'AAA',
+    position: '2B',
+  },
+  {
+    id: 6,
+    playerName: 'Alfredo Duno',
+    team: 'Daytona Tortugas',
+    age: 19,
+    level: 'A',
+    position: 'C',
+  },
+  {
+    id: 7,
+    playerName: 'Walker Jenkins',
+    team: 'St. Paul Saints',
+    age: 20,
+    level: 'AAA',
+    position: 'OF',
+  },
+  {
+    id: 8,
+    playerName: 'Eduardo Quintero',
+    team: 'Great Lakes Loons',
+    age: 20,
+    level: 'A+',
+    position: 'OF',
+  },
   // Sample data for demo
 ];
 
