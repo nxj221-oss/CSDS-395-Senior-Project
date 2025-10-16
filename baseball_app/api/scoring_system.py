@@ -75,7 +75,10 @@ class PlayerEvaluator:
 ps = [
     {"name": "Player A", "OBP": 0.350, "SLG": 0.500, "K%": 0.20, "BB%": 0.10, "age": 20, "level": "AA"},
     {"name": "Player B", "OBP": 0.320, "SLG": 0.400, "K%": 0.25, "BB%": 0.08, "age": 24, "level": "AA"},
-    {"name": "Player C", "OBP": 0.370, "SLG": 0.450, "K%": 0.18, "BB%": 0.12, "age": 22, "level": "AA"},
+    {"name": "Player C", "OBP": 0.323, "SLG": 0.367, "K%": 0.23, "BB%": 0.15, "age": 19, "level": "A"},
+    {"name": "Player D", "OBP": 0.294, "SLG": 0.333, "K%": 0.16, "BB%": 0.12, "age": 25, "level": "AAA"},
+    {"name": "Player E", "OBP": 0.368, "SLG": 0.425, "K%": 0.094, "BB%": 0.098, "age": 24, "level": "AAA"},
+    {"name": "Player F", "OBP": 0.288, "SLG": 0.486, "K%": 0.318, "BB%": 0.026, "age": 20, "level": "A"},
 ]
 
 weights = {"OBP": 0.3, "SLG": 0.3, "K%": -0.2, "BB%": 0.2}
@@ -86,5 +89,6 @@ evaluator = PlayerEvaluator(weights, avg_ages, usage_weight=0.5)
 scored_players = evaluator.evaluate_all(ps)
 
 # TODO: Replace printing out the results with what we will display the data with
-for p in scored_players:
-    print(p["name"], round(p["perf_score"], 2), round(p["usage_score"], 2), round(p["score"], 2))
+print("{:<10} {:<5} {:<6} {:<12} {:<6} {:<8}".format("Name", "Age", "Level", "performance", "usage", "overall"))
+for p in scored_players:    
+    print("{:<10} {:<5} {:<6} {:<12} {:<6} {:<8}".format(p['name'], p['age'], p['level'], round(p['perf_score'], 2), round(p['usage_score'], 2), round(p['score'], 2)))
