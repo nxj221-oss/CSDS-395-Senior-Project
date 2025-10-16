@@ -1,6 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from io import StringIO
+
+
 
 url = "https://blogs.fangraphs.com/2025-zips-projections-st-louis-cardinals/"
 
@@ -16,9 +19,14 @@ if not table_title:
 
 table = table_title.find_next("table")
 
-df = pd.read_html(str(table))[0]
+df = pd.read_html(StringIO(str(table)))[0]
 
 pitchers = df.to_dict(orient="records")
 
 for p in pitchers[:5]:
     print(p)
+
+output_path = "fangraphs_pitchers.csv"
+df.to_csv(output_path, index=False)
+
+print(f"Data successfully saved to {output_path}")
