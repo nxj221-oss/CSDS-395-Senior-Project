@@ -13,73 +13,73 @@ const columns = [
   { field: 'position', headerName: 'Position', width: 120 },
 ];
 
-const rows = [
-  {
-    id: 1,
-    playerName: 'Konnor Griffin',
-    team: 'Pittsburg Pirates',
-    age: 19,
-    level: 'AA',
-    position: 'SS',
-  },
-  {
-    id: 2,
-    playerName: 'Kevin McGonigle',
-    team: 'Erie SeaWolves',
-    age: 21,
-    level: 'AA',
-    position: 'SS',
-  },
-  {
-    id: 3,
-    playerName: 'Leo De Vries',
-    team: 'Midland RockHounds',
-    age: 18,
-    level: 'AA',
-    position: 'SS',
-  },
-  {
-    id: 4,
-    playerName: 'Josue Briceño',
-    team: 'Erie Seawolves',
-    age: 21,
-    level: 'AA',
-    position: '1B',
-  },
-  {
-    id: 5,
-    playerName: 'Travis Bazzana',
-    team: 'Columbus Clippers',
-    age: 23,
-    level: 'AAA',
-    position: '2B',
-  },
-  {
-    id: 6,
-    playerName: 'Alfredo Duno',
-    team: 'Daytona Tortugas',
-    age: 19,
-    level: 'A',
-    position: 'C',
-  },
-  {
-    id: 7,
-    playerName: 'Walker Jenkins',
-    team: 'St. Paul Saints',
-    age: 20,
-    level: 'AAA',
-    position: 'OF',
-  },
-  {
-    id: 8,
-    playerName: 'Eduardo Quintero',
-    team: 'Great Lakes Loons',
-    age: 20,
-    level: 'A+',
-    position: 'OF',
-  },
-  // Sample data for demo
-];
+// const rows = [
+//   {
+//     id: 1,
+//     playerName: 'Konnor Griffin',
+//     team: 'Pittsburg Pirates',
+//     age: 19,
+//     level: 'AA',
+//     position: 'SS',
+//   },
+//   {
+//     id: 2,
+//     playerName: 'Kevin McGonigle',
+//     team: 'Erie SeaWolves',
+//     age: 21,
+//     level: 'AA',
+//     position: 'SS',
+//   },
+//   {
+//     id: 3,
+//     playerName: 'Leo De Vries',
+//     team: 'Midland RockHounds',
+//     age: 18,
+//     level: 'AA',
+//     position: 'SS',
+//   },
+//   {
+//     id: 4,
+//     playerName: 'Josue Briceño',
+//     team: 'Erie Seawolves',
+//     age: 21,
+//     level: 'AA',
+//     position: '1B',
+//   },
+//   {
+//     id: 5,
+//     playerName: 'Travis Bazzana',
+//     team: 'Columbus Clippers',
+//     age: 23,
+//     level: 'AAA',
+//     position: '2B',
+//   },
+//   {
+//     id: 6,
+//     playerName: 'Alfredo Duno',
+//     team: 'Daytona Tortugas',
+//     age: 19,
+//     level: 'A',
+//     position: 'C',
+//   },
+//   {
+//     id: 7,
+//     playerName: 'Walker Jenkins',
+//     team: 'St. Paul Saints',
+//     age: 20,
+//     level: 'AAA',
+//     position: 'OF',
+//   },
+//   {
+//     id: 8,
+//     playerName: 'Eduardo Quintero',
+//     team: 'Great Lakes Loons',
+//     age: 20,
+//     level: 'A+',
+//     position: 'OF',
+//   },
+//   // Sample data for demo
+// ];
 
 function PredictionsPage() {
   const [searchInput, setSearchInput] = React.useState('');
@@ -88,16 +88,23 @@ function PredictionsPage() {
   const [selectedAges, setSelectedAges] = React.useState([]);
   const [selectedLevels, setSelectedLevels] = React.useState([]);
   const [selectedPositions, setSelectedPositions] = React.useState([]);
+  const [rows, setRows] = React.useState([]);
 
   React.useEffect(() => {
     const timeoutId = setTimeout(() => setDebouncedSearch(searchInput), 250);
     return () => clearTimeout(timeoutId);
   }, [searchInput]);
 
-  const teamOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.team))).sort(), []);
-  const ageOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.age))).sort((a, b) => a - b), []);
-  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.level))).sort(), []);
-  const positionOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.position))).sort(), []);
+  React.useEffect(() => {
+    fetch('/api/examplePlayerData').then(res => res.json()).then(data => {
+      setRows(data);
+    });
+  }, []);
+
+  const teamOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.team))).sort(), [rows]);
+  const ageOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.age))).sort((a, b) => a - b), [rows]);
+  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.level))).sort(), [rows]);
+  const positionOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.position))).sort(), [rows]);
 
   const filteredRows = React.useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
@@ -111,7 +118,7 @@ function PredictionsPage() {
       const passesPosition = selectedPositions.length === 0 || selectedPositions.includes(r.position);
       return passesSearch && passesTeam && passesAge && passesLevel && passesPosition;
     });
-  }, [debouncedSearch, selectedTeams, selectedAges, selectedLevels, selectedPositions]);
+  }, [debouncedSearch, selectedTeams, selectedAges, selectedLevels, selectedPositions, rows]);
 
   return (
     <Box>
