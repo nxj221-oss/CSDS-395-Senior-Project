@@ -30,14 +30,7 @@ const theme = createTheme({
 
 function PageFrame() {
   const [aboutOpen, setAboutOpen] = React.useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
   const [currentTab, setCurrentTab] = useState(0);
-
-  useEffect(() => {
-    fetch('/api/time').then(res => res.json()).then(data => {
-      setCurrentTime(data.time);
-    });
-  }, []);
 
   const handleAboutOpen = () => {
     setAboutOpen(true);
@@ -54,8 +47,9 @@ function PageFrame() {
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="fixed">
-          <Toolbar>
+        <AppBar position="static">
+          <div>
+            <Toolbar>
             <IconButton
               size="large"
               edge="start"
@@ -80,6 +74,7 @@ function PageFrame() {
             <Tab label="Metrics" />
             <Tab label="Predictions" />
           </Tabs>
+          </div>
         </AppBar>
       </Box>
 
@@ -88,8 +83,6 @@ function PageFrame() {
         {currentTab === 1 && <MetricsPage />}
         {currentTab === 2 && <PredictionsPage />}
       </Box>
-      {/* this time display is not necessary, it just serves as a model to show how we can get things from the backend */}
-      <p>The current time is {new Date(currentTime * 1000).toLocaleString()}.</p>
       <AboutDialog open={aboutOpen} handleClose={handleAboutClose}/>
     </ThemeProvider>
   )

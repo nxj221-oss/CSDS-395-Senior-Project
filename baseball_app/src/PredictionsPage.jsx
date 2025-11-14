@@ -5,12 +5,30 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { DataGrid } from '@mui/x-data-grid';
 
 const columns = [
-  { field: 'id', headerName: 'ID', width: 70 },
-  { field: 'playerName', headerName: 'Player Name', width: 180 },
-  { field: 'team', headerName: 'Team', width: 140 },
-  { field: 'age', headerName: 'Age', width: 90 },
-  { field: 'level', headerName: 'Level', width: 120 },
-  { field: 'position', headerName: 'Position', width: 120 },
+  { field: 'Player', headerName: 'Player Name', width: 160 },
+  { field: 'B', headerName: 'B', width: 50 },
+  { field: 'Age', headerName: 'Age', width: 50 },
+  { field: 'PO', headerName: 'PO', width: 50 },
+  { field: 'PA', headerName: 'PA', width: 50 },
+  { field: 'AB', headerName: 'At Bats', width: 70 },
+  { field: 'R', headerName: 'R', width: 50 },
+  { field: 'H', headerName: 'H', width: 50 },
+  { field: '2B', headerName: '2B', width: 50 },
+  { field: '3B', headerName: '3B', width: 50 },
+  { field: 'HR', headerName: 'HR', width: 50 },
+  { field: 'RBI', headerName: 'RBI', width: 50 },
+  { field: 'BB', headerName: 'BB', width: 50 },
+  { field: 'SO', headerName: 'SO', width: 50 },
+  { field: 'SB', headerName: 'SB', width: 50 },
+  { field: 'CS', headerName: 'CS', width: 50 },
+  { field: '1B', headerName: '1B', width: 50 },
+  { field: 'TB', headerName: 'TB', width: 50 },
+  { field: 'AVG', headerName: 'AVG', width: 70 },
+  { field: 'OBP', headerName: 'OBP', width: 70 },
+  { field: 'SLG', headerName: 'SLG', width: 70 },
+  { field: 'PerformanceMetric', headerName: 'Performance Metric', width: 120 },
+  { field: 'UsageMetric', headerName: 'Usage Metric', width: 120 },
+  { field: 'CombinedMetric', headerName: 'Combined Metric', width: 120 },
 ];
 
 function PredictionsPage() {
@@ -28,26 +46,26 @@ function PredictionsPage() {
   }, [searchInput]);
 
   React.useEffect(() => {
-    fetch('/api/examplePlayerData').then(res => res.json()).then(data => {
+    fetch('/api/playerData').then(res => res.json()).then(data => {
       setRows(data);
     });
   }, []);
 
-  const teamOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.team))).sort(), [rows]);
-  const ageOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.age))).sort((a, b) => a - b), [rows]);
-  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.level))).sort(), [rows]);
-  const positionOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.position))).sort(), [rows]);
+  const teamOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.PO))).sort(), [rows]);
+  const ageOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.Age))).sort((a, b) => a - b), [rows]);
+  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.B))).sort(), [rows]);
+  const positionOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.HR))).sort(), [rows]);
 
   const filteredRows = React.useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
     return rows.filter((r) => {
       const passesSearch = !query ||
-        String(r.playerName).toLowerCase().includes(query) ||
-        String(r.team).toLowerCase().includes(query);
-      const passesTeam = selectedTeams.length === 0 || selectedTeams.includes(r.team);
-      const passesAge = selectedAges.length === 0 || selectedAges.includes(r.age);
-      const passesLevel = selectedLevels.length === 0 || selectedLevels.includes(r.level);
-      const passesPosition = selectedPositions.length === 0 || selectedPositions.includes(r.position);
+        String(r.Player).toLowerCase().includes(query);
+        //|| String(r.team).toLowerCase().includes(query);
+      const passesTeam = selectedTeams.length === 0 || selectedTeams.includes(r.PO);
+      const passesAge = selectedAges.length === 0 || selectedAges.includes(r.Age);
+      const passesLevel = selectedLevels.length === 0 || selectedLevels.includes(r.B);
+      const passesPosition = selectedPositions.length === 0 || selectedPositions.includes(r.HR);
       return passesSearch && passesTeam && passesAge && passesLevel && passesPosition;
     });
   }, [debouncedSearch, selectedTeams, selectedAges, selectedLevels, selectedPositions, rows]);
@@ -67,7 +85,7 @@ function PredictionsPage() {
           fullWidth
           variant="outlined"
           size="small"
-          placeholder="Search by player or team"
+          placeholder="Search by player name"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           sx={{ bgcolor: 'white' }}
@@ -95,13 +113,13 @@ function PredictionsPage() {
 
         {/* Team Filter */}
         <FormControl sx={{ minWidth: 180 }} size="small">
-          <InputLabel id="team-filter-label">Team</InputLabel>
+          <InputLabel id="team-filter-label">PO</InputLabel>
           <Select
             labelId="team-filter-label"
             multiple
             value={selectedTeams}
             onChange={(e) => setSelectedTeams(e.target.value)}
-            input={<OutlinedInput label="Team" />}
+            input={<OutlinedInput label="PO" />}
             renderValue={(selected) => selected.join(', ')}
             sx={{ bgcolor: 'white' }}
           >
@@ -137,13 +155,13 @@ function PredictionsPage() {
 
         {/* Level Filter */}
         <FormControl sx={{ minWidth: 140 }} size="small">
-          <InputLabel id="level-filter-label">Level</InputLabel>
+          <InputLabel id="level-filter-label">B</InputLabel>
           <Select
             labelId="level-filter-label"
             multiple
             value={selectedLevels}
             onChange={(e) => setSelectedLevels(e.target.value)}
-            input={<OutlinedInput label="Level" />}
+            input={<OutlinedInput label="B" />}
             renderValue={(selected) => selected.join(', ')}
             sx={{ bgcolor: 'white' }}
           >
@@ -158,13 +176,13 @@ function PredictionsPage() {
 
         {/* Position Filter */}
         <FormControl sx={{ minWidth: 160 }} size="small">
-          <InputLabel id="position-filter-label">Position</InputLabel>
+          <InputLabel id="position-filter-label">HR</InputLabel>
           <Select
             labelId="position-filter-label"
             multiple
             value={selectedPositions}
             onChange={(e) => setSelectedPositions(e.target.value)}
-            input={<OutlinedInput label="Position" />}
+            input={<OutlinedInput label="HR" />}
             renderValue={(selected) => selected.join(', ')}
             sx={{ bgcolor: 'white' }}
           >
@@ -184,6 +202,7 @@ function PredictionsPage() {
             <DataGrid
               rows={filteredRows}
               columns={columns}
+              getRowId={(row) => row.Player}
               pageSize={10}
               rowsPerPageOptions={[5, 10, 25]}
               checkboxSelection

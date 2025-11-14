@@ -1,7 +1,13 @@
 import time
 from flask import Flask
+import pandas as pd
 
 app = Flask(__name__)
+
+@app.route('/api/playerData')
+def get_player_data():
+   df = pd.read_csv('../evaluated_cardinals_batters.csv')
+   return df.to_json(orient='records', lines=False)
 
 @app.route('/api/time')
 def get_current_time():
