@@ -4,9 +4,16 @@ import pandas as pd
 
 app = Flask(__name__)
 
+def formatTeamName(x):
+  if str(x).endswith('.csv'):
+    return str(x).replace('.csv', '').replace('-', ' ').title()
+  return x
+
 @app.route('/api/playerData')
 def get_player_data():
-   df = pd.read_csv('../evaluated_cardinals_batters.csv')
+   df = pd.read_csv('../aggregated_data/all_players_MLB_formatted.csv')
+   df = df.rename(columns={"team.csv": "team"})
+   df = df.map(lambda x: formatTeamName(x))
    return df.to_json(orient='records', lines=False)
 
 @app.route('/api/time')

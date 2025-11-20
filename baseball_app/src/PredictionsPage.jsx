@@ -10,9 +10,10 @@ const columns = [
   { field: 'Age', headerName: 'Age', width: 70 },
   { field: 'PO', headerName: 'PO', width: 70 },
   { field: 'AB', headerName: 'At Bats', width: 90 },
-  { field: 'PerformanceMetric', headerName: 'Performance Metric', width: 120 },
-  { field: 'UsageMetric', headerName: 'Usage Metric', width: 120 },
-  { field: 'CombinedMetric', headerName: 'Combined Metric', width: 120 },
+  { field: 'team', headerName: 'Team', width: 180},
+  { field: 'perf', headerName: 'Performance', width: 120 },
+  { field: 'use', headerName: 'Usage', width: 120 },
+  { field: 'combined', headerName: 'Combined', width: 120 },
 ];
 
 function PredictionsPage() {
