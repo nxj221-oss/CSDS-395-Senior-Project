@@ -11,9 +11,38 @@ def formatTeamName(x):
 
 @app.route('/api/playerData')
 def get_player_data():
+   # get data
    df = pd.read_csv('../aggregated_data/all_players_MLB_formatted.csv')
+
+   # format team column
    df = df.rename(columns={"team.csv": "team"})
    df = df.map(lambda x: formatTeamName(x))
+
+   # add level column
+   df['level'] = "MLB"
+
+   # handle duplicate players --> average metrics into one entry weighted based off AB(at bats)
+   duplicates = df[df.duplicated(subset='Player')]
+   df = df.drop_duplicates(subset='Player')
+   for r in df.itertuples():
+    if duplicates['Player'].str.contains(r.Player).any():
+      for d in duplicates.itertuples():
+        if d.Player == r.Player:
+          dweight = d.AB/(d.AB + r.AB)
+          rweight = r.AB/(d.AB + r.AB)
+          # average the metrics
+          df.at[r.Index, 'combined'] = ((d.combined*dweight) + (r.combined*rweight))
+          df.at[r.Index, 'perf'] = ((d.perf*dweight) + (r.perf*rweight))
+          df.at[r.Index, 'use'] = ((d.use*dweight) + (r.use*rweight))
+          # format AB 
+          df.at[r.Index, 'AB'] = str(d.AB) + " / " + str(r.AB)
+          # format level
+          if d.level != r.level:
+            df.at[r.Index, 'level'] = d.level + " / " + r.level
+          # format team names if there are multiple
+          if d.team != r.team:
+            df.at[r.Index, 'team'] = d.team + " / " + r.team
+
    return df.to_json(orient='records', lines=False)
 
 @app.route('/api/time')

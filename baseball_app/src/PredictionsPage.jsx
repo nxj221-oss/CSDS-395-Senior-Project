@@ -11,6 +11,7 @@ const columns = [
   { field: 'PO', headerName: 'PO', width: 70 },
   { field: 'AB', headerName: 'At Bats', width: 90 },
   { field: 'team', headerName: 'Team', width: 180},
+  { field: 'level', headerName: 'Level', width: 70 },
   { field: 'perf', headerName: 'Performance', width: 120 },
   { field: 'use', headerName: 'Usage', width: 120 },
   { field: 'combined', headerName: 'Combined', width: 120 },
@@ -38,7 +39,7 @@ function PredictionsPage() {
 
   const teamOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.team))).sort(), [rows]);
   const ageOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.Age))).sort((a, b) => a - b), [rows]);
-  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.B))).sort(), [rows]);
+  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.level))).sort(), [rows]);
   const positionOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.PO))).sort(), [rows]);
 
   const filteredRows = React.useMemo(() => {
@@ -49,7 +50,7 @@ function PredictionsPage() {
         //|| String(r.team).toLowerCase().includes(query);
       const passesTeam = selectedTeams.length === 0 || selectedTeams.includes(r.team);
       const passesAge = selectedAges.length === 0 || selectedAges.includes(r.Age);
-      const passesLevel = selectedLevels.length === 0 || selectedLevels.includes(r.B);
+      const passesLevel = selectedLevels.length === 0 || selectedLevels.includes(r.level);
       const passesPosition = selectedPositions.length === 0 || selectedPositions.includes(r.PO);
       return passesSearch && passesTeam && passesAge && passesLevel && passesPosition;
     });
@@ -140,13 +141,13 @@ function PredictionsPage() {
 
         {/* Level Filter */}
         <FormControl sx={{ minWidth: 140 }} size="small">
-          <InputLabel id="level-filter-label">B</InputLabel>
+          <InputLabel id="level-filter-label">Level</InputLabel>
           <Select
             labelId="level-filter-label"
             multiple
             value={selectedLevels}
             onChange={(e) => setSelectedLevels(e.target.value)}
-            input={<OutlinedInput label="B" />}
+            input={<OutlinedInput label="Level" />}
             renderValue={(selected) => selected.join(', ')}
             sx={{ bgcolor: 'white' }}
           >
