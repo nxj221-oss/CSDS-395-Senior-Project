@@ -25,15 +25,8 @@ def collect_data(team):
 
     df = pd.read_html(StringIO(str(table)))[0]
 
-    batters = df.to_dict(orient="records")
-
-    #for b in batters[:5]:
-    #    print(b)
-
-    output_path = f"scraped_data/{team}.csv"
+    output_path = f"scraped_data/{team}-MLB.csv"
     df.to_csv(output_path, index=False)
-
-    # print(f"Data successfully saved to {output_path}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
