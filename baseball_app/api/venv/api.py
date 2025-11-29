@@ -34,8 +34,8 @@ def get_player_data():
           df.at[r.Index, 'combined'] = ((d.combined*dweight) + (r.combined*rweight))
           df.at[r.Index, 'perf'] = ((d.perf*dweight) + (r.perf*rweight))
           df.at[r.Index, 'use'] = ((d.use*dweight) + (r.use*rweight))
-          # format AB 
-          df.at[r.Index, 'AB'] = str(d.AB) + " / " + str(r.AB)
+          # format AB (adding the at bats will allow more than just one duplicate to be successfully averaged)
+          df.at[r.Index, 'AB'] = d.AB + r.AB
           # format level
           if d.level != r.level:
             df.at[r.Index, 'level'] = d.level + " / " + r.level
