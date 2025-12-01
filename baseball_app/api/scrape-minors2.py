@@ -64,7 +64,6 @@ def collect_data(team, pos):
     aaa = aaa.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
     aaa = aaa.rename(columns={"PlayerName": "Name"})
 
-    print(aaa.head())
     output_path = f"scraped_data/{team}-AAA.csv"
     aaa.to_csv(output_path, index=False)
 
@@ -75,7 +74,6 @@ def collect_data(team, pos):
     aa = aa.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
     aa = aa.rename(columns={"PlayerName": "Name"})
 
-    print(aa.head())
     output_path = f"scraped_data/{team}-AA.csv"
     aa.to_csv(output_path, index=False)
 
@@ -86,7 +84,6 @@ def collect_data(team, pos):
     ap = ap.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
     ap = ap.rename(columns={"PlayerName": "Name"})
 
-    print(ap.head())
     output_path = f"scraped_data/{team}-A+.csv"
     ap.to_csv(output_path, index=False)
 
@@ -97,7 +94,6 @@ def collect_data(team, pos):
     a = a.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
     a = a.rename(columns={"PlayerName": "Name"})
 
-    print(a.head())
     output_path = f"scraped_data/{team}-A.csv"
     a.to_csv(output_path, index=False)
 
@@ -108,7 +104,6 @@ def collect_data(team, pos):
     r = r.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
     r = r.rename(columns={"PlayerName": "Name"})
 
-    print(r.head())
     output_path = f"scraped_data/{team}-Rookie.csv"
     r.to_csv(output_path, index=False)
 
