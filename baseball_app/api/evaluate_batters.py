@@ -42,19 +42,49 @@ def handedness_factor(bats):
     return bw.HANDEDNESS_WEIGHTS.get(bats, bw.HANDEDNESS_WEIGHTS.get("DEFAULT", 1.0))
 
 def age_to_level_score(age, level):
-    """Gaussian-like score in [0,1] based on distance from target age for the level."""
+    """
+    Aggressive tail penalty WITHOUT a floor:
+      - For age <= cutoff (target + cutoff_offset): use a smooth asymmetric curve.
+      - For age > cutoff: apply an exponential decay tail (no floor).
+      - Params available per-level via AGE_TO_LEVEL_WEIGHTS:
+        "age", "deviation", "younger_boost", "older_penalty",
+        "cutoff_offset", "tail_alpha", "tail_beta"
+    """
     try:
         age = float(age)
     except Exception:
         return 1.0
+
     level = str(level).strip()
     level_data = bw.AGE_TO_LEVEL_WEIGHTS.get(level)
     if not level_data:
         return 1.0
+
     target = float(level_data.get("age", age))
     dev = float(level_data.get("deviation", 3.0))
-    # exp(- (age - target)^2 / (2*sigma^2)) gives 0..1
-    return math.exp(-((age - target) ** 2) / (2 * (dev ** 2)))
+
+    younger_boost = float(level_data.get("younger_boost", 0.25))
+    older_penalty = float(level_data.get("older_penalty", 0.20))
+
+    cutoff_offset = float(level_data.get("cutoff_offset", 3.0))
+    tail_alpha = float(level_data.get("tail_alpha", 0.4))
+    tail_beta = float(level_data.get("tail_beta", 1.5))
+
+    cutoff = target + cutoff_offset
+
+    if age <= cutoff:
+        asym = (target - age) / dev
+        proximity = math.exp(-((age - target) ** 2) / (2 * (dev ** 2)))
+        signed = math.tanh(asym)
+        if signed > 0:
+            return 1.0 + signed * younger_boost * proximity
+        else:
+            return 1.0 + signed * older_penalty * proximity
+
+    # Above cutoff -> exponential decay tail (no floor)
+    years_past = age - cutoff
+    tail_val = math.exp(-tail_alpha * (years_past ** tail_beta))
+    return tail_val
 
 # -------- metrics (NO RESCALING) --------
 def compute_performance_raw(df):
@@ -117,24 +147,30 @@ def compute_usage_raw(df):
 
     return usage
 
+# Normalize name column: accept Player or Name, store as Player
+def normalize_player_name(df):
+    if "Player" in df.columns:
+        df["Player"] = df["Player"].astype(str)
+    elif "Name" in df.columns:
+        df["Player"] = df["Name"].astype(str)
+    else:
+        raise ValueError("Neither 'Player' nor 'Name' column found in input file.")
+
+    # Optional cleanup: strip whitespace
+    df["Player"] = df["Player"].str.strip()
+    return df
+
 # -------- main flow --------
 def evaluate_players(input_csv, output_csv):
     df = pd.read_csv(input_csv)
+    df = normalize_player_name(df)
     df = compute_rate_stats(df)
 
     # compute raw metrics
     df["PerformanceMetric"] = compute_performance_raw(df)
     df["UsageMetric"] = compute_usage_raw(df)
 
-    # combined: use configurable performance_share if present
-    perf_share = 0.7
-    if hasattr(bw, "WEIGHTS") and isinstance(bw.WEIGHTS, dict) and "performance_share" in bw.WEIGHTS:
-        try:
-            perf_share = float(bw.WEIGHTS["performance_share"])
-        except Exception:
-            pass
-
-    df["CombinedMetric"] = (perf_share * df["PerformanceMetric"] + (1.0 - perf_share) * df["UsageMetric"])
+    df["CombinedMetric"] = (bw.performance_weighting_percent * df["PerformanceMetric"] + (1.0 - bw.performance_weighting_percent) * df["UsageMetric"])
 
     # Round metrics moderately for CSV cleanliness (you can remove rounding if you want full precision)
     df["PerformanceMetric"] = df["PerformanceMetric"].round(6)
@@ -148,7 +184,7 @@ def evaluate_players(input_csv, output_csv):
         out_df[c] = df[c] if c in df.columns else np.nan
 
     out_df.to_csv(output_csv, index=False)
-    print(f"✅ Evaluation complete — saved to {output_csv}")
+    #print(f"✅ Evaluation complete — saved to {output_csv}")
 
 # -----------------------
 # CLI entrypoint
