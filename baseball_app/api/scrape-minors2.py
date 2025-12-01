@@ -53,34 +53,65 @@ org_to_id = {
     'pittsburgh-pirates': 27,
     'st-louis-cardinals': 28,
     'san-diego-padres': 29,
-    'san-francisco-gians': 30,
+    'san-francisco-giants': 30,
 }
 
 def collect_data(team, pos):
-    base_url = f"https://www.fangraphs.com/leaders/minor-league?pos={pos}&level=0&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32&stats=bat&qual=50&type=0&team=&season=2025&seasonEnd=2025&org={org_to_id[team]}&ind=0&splitTeam=false&players=&sort=23,1"
+    # AAA
+    base_url = f"https://www.fangraphs.com/api/leaders/minor-league/data?pos={pos}&level=1&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32&stats=bat&qual=50&type=0&team=all&season=2025&seasonEnd=2025&org={org_to_id[team]}&ind=0&splitTeam=false"
     
-    response = requests.get(base_url)
-    response.raise_for_status()
-    html = response.text
+    aaa = pd.read_json(base_url)
+    aaa = aaa.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
+    aaa = aaa.rename(columns={"PlayerName": "Name"})
 
-    soup = BeautifulSoup(html, "html.parser")
-    
-    section = soup.find("div", class_="table_fixed", )
-    if not section:
-        raise ValueError("could not find table")
-    
-    table = section.find_next("table")
-    headers = [th.get_text(strip=True) for th in table.find_all("th")]
-    print(headers)
-    
-    rows = []
-    for tr in table.find_all("tr"):
-        cells = tr.find_all("td")
-        if cells:
-            rows.append([cell.get_text(strip=True) for cell in cells])
+    print(aaa.head())
+    output_path = f"scraped_data/{team}-AAA.csv"
+    aaa.to_csv(output_path, index=False)
 
-    df = pd.DataFrame(rows, columns=headers)
-    print(df.head())
+    # AA
+    base_url = f"https://www.fangraphs.com/api/leaders/minor-league/data?pos={pos}&level=2&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32&stats=bat&qual=50&type=0&team=all&season=2025&seasonEnd=2025&org={org_to_id[team]}&ind=0&splitTeam=false"
+    
+    aa = pd.read_json(base_url)
+    aa = aa.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
+    aa = aa.rename(columns={"PlayerName": "Name"})
+
+    print(aa.head())
+    output_path = f"scraped_data/{team}-AA.csv"
+    aa.to_csv(output_path, index=False)
+
+    # A+
+    base_url = f"https://www.fangraphs.com/api/leaders/minor-league/data?pos={pos}&level=3&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32&stats=bat&qual=50&type=0&team=all&season=2025&seasonEnd=2025&org={org_to_id[team]}&ind=0&splitTeam=false"
+    
+    ap = pd.read_json(base_url)
+    ap = ap.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
+    ap = ap.rename(columns={"PlayerName": "Name"})
+
+    print(ap.head())
+    output_path = f"scraped_data/{team}-A+.csv"
+    ap.to_csv(output_path, index=False)
+
+    # A
+    base_url = f"https://www.fangraphs.com/api/leaders/minor-league/data?pos={pos}&level=4&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32&stats=bat&qual=50&type=0&team=all&season=2025&seasonEnd=2025&org={org_to_id[team]}&ind=0&splitTeam=false"
+    
+    a = pd.read_json(base_url)
+    a = a.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
+    a = a.rename(columns={"PlayerName": "Name"})
+
+    print(a.head())
+    output_path = f"scraped_data/{team}-A.csv"
+    a.to_csv(output_path, index=False)
+
+    # Rookie
+    base_url = f"https://www.fangraphs.com/api/leaders/minor-league/data?pos={pos}&level=6&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32&stats=bat&qual=50&type=0&team=all&season=2025&seasonEnd=2025&org={org_to_id[team]}&ind=0&splitTeam=false"
+    
+    r = pd.read_json(base_url)
+    r = r.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
+    r = r.rename(columns={"PlayerName": "Name"})
+
+    print(r.head())
+    output_path = f"scraped_data/{team}-Rookie.csv"
+    r.to_csv(output_path, index=False)
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
