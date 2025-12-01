@@ -5,36 +5,36 @@ performance_weighting_percent = 0.5  # Percentage weight for performance vs. usa
 # Configuration and Weights
 PERFORMANCE_WEIGHTS = {
     # Performance Metrics -- all weights are correlated with their plate appearances
-    "R": 1.0,  # Runs
-    "HR": 1.4,  # Home Runs
+    "R": 1.5,  # Runs
+    "HR": 4.0,  # Home Runs
     "RBI": 1.2,  # Runs Batted In
-    "SB": 1.5,  # Stolen Bases
-    "AVG": 3.0,  # Batting Average
-    "OBP": 4.0,  # On-Base Percentage
-    "SLG": 3.5,  # Slugging Percentage
-    "K": -2.0,  # Strikeouts (negative weight)
-    "BB": 1.0,  # Walks
+    "SB": 3.0,  # Stolen Bases
+    "AVG": 2.0,  # Batting Average
+    "OBP": 1.5,  # On-Base Percentage
+    "SLG": 2.5,  # Slugging Percentage
+    "K": -3.0,  # Strikeouts (negative weight)
+    "BB": 0.5,  # Walks
 }
 
 USAGE_WEIGHTS = {
     # Usage Metrics
-    "defensive-position": 1.0,  # Defensive Position
-    "handedness": 0.125,  # Handedness (left/right)
-    "age-to-level": 1.0,  # Age relative to league level
-    "games-played": 1.0, # Games Played
+    "defensive-position": 1.0, # 1.0,  # Defensive Position
+    "handedness": 0.125, # 0.125,  # Handedness (left/right)
+    "age-to-level": 2.5, #1.0,  # Age relative to league level
+    "games-played": 0.5, #0.5, # Games Played
 }
 
 # Positional Adjustment Factors
 POSITIONAL_WEIGHTS = {
-    "C": 2.0,
-    "1B": 0.75,
-    "2B": 1.25,
+    "C": 3.0,
+    "1B": 0.5,
+    "2B": 1.5,
     "3B": 1.0,
-    "SS": 1.5,
+    "SS": 2.0,
     "LF": 1.0,
-    "CF": 1.5,
-    "RF": 1.0,
-    "DH": 0.5,
+    "CF": 2.0,
+    "RF": 0.75,
+    "DH": 0.125,
 }
 
 # Handedness Adjustment Factors
@@ -46,10 +46,18 @@ HANDEDNESS_WEIGHTS = {
 
 # Age-to-Level Adjustment Factors
 AGE_TO_LEVEL_WEIGHTS = {
-    "Rookie": {"age": 19, "deviation": 2.0},
-    "A": {"age": 21, "deviation": 2.5},
-    "A+": {"age": 22.5, "deviation": 2.5},
-    "AA": {"age": 24, "deviation": 3},
-    "AAA": {"age": 27, "deviation": 3.5},
-    "MLB": {"age": 29.5, "deviation": 3.75},
+    "Rookie": {"age": 19, "deviation": 2.0, "younger_boost": 0.30, "older_penalty": 0.20},
+    "A":      {"age": 21, "deviation": 2.5, "younger_boost": 0.25, "older_penalty": 0.18},
+    "A+":     {"age": 22.5, "deviation": 2.5, "younger_boost": 0.20, "older_penalty": 0.18},
+    "AA":     {"age": 24, "deviation": 3.0, "younger_boost": 0.18, "older_penalty": 0.15},
+    "AAA":    {"age": 27, "deviation": 3.5, "younger_boost": 0.15, "older_penalty": 0.12},
+    "MLB":    {"age": 29.5, "deviation": 3.75, "younger_boost": 0.25, "older_penalty": 0.50},
+}
+
+# Age Penalties
+AGE_PENALTY = {
+    "cutoff_age": 27.0, # 31.0
+    "rate": 0.125, # 0.5
+    "exponent": 0.25, # 1.25
+    "min_multiplier": None,
 }

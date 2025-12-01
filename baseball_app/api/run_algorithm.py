@@ -38,24 +38,25 @@ with open(teams_list, newline='') as file:
 
     if fetch_new_data or process_data:
         for team in reader:
-            #print(line)
-            #team = line[0]
 
             # Scrape the data
             if fetch_new_data:
                 # Process MLB team
                 os.system(f"python scrapeFangraphs.py {team[0]}")
-
+                
                 # Process each of the MiLB affiliate teams (aaa,aa,high-a,single-a,rookie)
                 for index in range(1, 5):
                     os.system(f"python scrape-minors.py {team[index]} {team[0]} {levels[index]}")
+                    #break # TODO: Remove -- this line just ensures only the AAA players have their data scraped
 
 
             # Run the algorithm
             if process_data:
                 for level in levels:
-                    os.system(f"python evaluate_batters.py {scraped_data_path}/{team[0]}-{level}.csv {processed_data_path}/{team[0]}-{level}.csv")
+                    os.system(f"python evaluate_batters.py {scraped_data_path}{team[0]}-{level}.csv {processed_data_path}{team[0]}-{level}.csv")
+                    break
 
+            # Stop the loop from running for multiple teams if we're only testing the algorithm
             if run_for_one_team:
                 break
     
@@ -68,6 +69,6 @@ if aggreggate_data:
     "--level MLB"
     )
 
-# TODO: Uncomment
-# os.system(f"python print_outputs.py")
+# Display the outputs
+os.system(f"python print_outputs.py")
 

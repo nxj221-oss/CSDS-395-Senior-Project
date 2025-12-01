@@ -6,7 +6,7 @@ import sys
 
 def collect_data(team):
     url = f"https://blogs.fangraphs.com/2025-zips-projections-{team}/"
-
+    
     # Rockies projections is misspelled on fangraphs so use projection instead of projections in url
     if team == "colorado-rockies":
         url = "https://blogs.fangraphs.com/2025-zips-projection-colorado-rockies/"
