@@ -1,21 +1,41 @@
 #!/usr/bin/env python3
+"""
+aggregate_and_scale.py
+
+Reads per-team CSV files from --input-dir, applies level-aware age penalties
+(using configs in batter_weights.AGE_PENALTY), computes z-scaled performance
+and usage metrics, applies a level multiplier from batter_weights.LEVEL_WEIGHTS,
+and writes a compact aggregated CSV per requested level (or ALL if --level omitted).
+"""
+
 import os
 import argparse
 from glob import glob
 import pandas as pd
 import numpy as np
 import math
+import sys
 
-# new: import config for age penalty
 import batter_weights as bw
 
+# -----------------------
+# CLI
+# -----------------------
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--input-dir", default="processed_data", help="Directory with per-team CSVs")
     p.add_argument("--output-dir", default="aggregated_data", help="Where to write formatted outputs")
     p.add_argument("--level", default=None, help="Level to filter on (e.g. MLB). If omitted, uses all files")
+    p.add_argument(
+        "--per-level-scale",
+        action="store_true",
+        help="If set, computes perf/use z-scores within each Level group instead of globally."
+    )
     return p.parse_args()
 
+# -----------------------
+# IO helpers
+# -----------------------
 def read_and_concat(input_dir):
     files = glob(os.path.join(input_dir, "*.csv"))
     if not files:
@@ -27,14 +47,13 @@ def read_and_concat(input_dir):
         dfs.append(df)
     return pd.concat(dfs, ignore_index=True, sort=False)
 
+# -----------------------
+# scaling helpers
+# -----------------------
 def compute_z_scaled(series):
-    """Return z-score and scaled_0_100 for a numeric series.
-       scaled = 50 + z*10 clipped to [0,100].
-       If std==0, z=0 for all and scaled=50.
-    """
     s = pd.to_numeric(series, errors="coerce")
     mean = s.mean()
-    std = s.std(ddof=0)  # population std for deterministic behavior
+    std = s.std(ddof=0)
     if pd.isna(std) or std == 0:
         z = (s - mean).fillna(0) * 0.0
     else:
@@ -43,7 +62,11 @@ def compute_z_scaled(series):
     return z, scaled
 
 def get_perf_share():
-    """Return performance_share from batter_weights if present, else default 0.7"""
+    try:
+        if hasattr(bw, "performance_weighting_percent"):
+            return float(getattr(bw, "performance_weighting_percent"))
+    except Exception:
+        pass
     try:
         if hasattr(bw, "WEIGHTS") and isinstance(bw.WEIGHTS, dict) and "performance_share" in bw.WEIGHTS:
             return float(bw.WEIGHTS["performance_share"])
@@ -52,16 +75,44 @@ def get_perf_share():
     return 0.7
 
 # -----------------------
-# Age penalty helpers
+# Age penalty helpers (level-aware)
 # -----------------------
-def _get_age_penalty_config():
-    """Return the AGE_PENALTY dict from batter_weights with safe defaults."""
-    cfg = {}
+def _canonicalize_level(level_str):
+    if level_str is None:
+        return None
+    s = str(level_str).strip()
+    if not s:
+        return None
+    s_up = s.upper()
+    if s_up in {"MLB", "AAA", "AA", "A+", "A", "ROOKIE"}:
+        if s_up == "A+":
+            return "A+"
+        if s_up == "ROOKIE":
+            return "Rookie"
+        return s_up
+    cleaned = s_up.replace("HIGHA", "A+").replace("HIGH-A", "A+").replace("HIGH_A", "A+")
+    cleaned = cleaned.replace("LOWA", "A").replace("LOW-A", "A").replace("LOW_A", "A")
+    cleaned = cleaned.replace("APLUS", "A+").replace("A-ADVANCED", "A+")
+    cleaned = cleaned.replace(".", "").replace(" ", "").replace("_", "")
+    return cleaned
+
+def _get_age_penalty_config_for_level(level):
     try:
-        cfg = getattr(bw, "AGE_PENALTY", {}) or {}
+        all_cfg = getattr(bw, "AGE_PENALTY", {}) or {}
+        lvl = _canonicalize_level(level) or "default"
+        if isinstance(all_cfg, dict):
+            if lvl in all_cfg:
+                cfg = all_cfg[lvl]
+            elif lvl.upper() in all_cfg:
+                cfg = all_cfg[lvl.upper()]
+            elif lvl.title() in all_cfg:
+                cfg = all_cfg[lvl.title()]
+            else:
+                cfg = all_cfg.get("default", {})
+        else:
+            cfg = {}
     except Exception:
         cfg = {}
-    # defaults
     return {
         "cutoff_age": float(cfg.get("cutoff_age", 33.0)),
         "rate": float(cfg.get("rate", cfg.get("penalty_rate", 0.5))),
@@ -69,68 +120,92 @@ def _get_age_penalty_config():
         "min_multiplier": cfg.get("min_multiplier", cfg.get("min_mult", None)),
     }
 
-def compute_age_multiplier(age):
-    """
-    Given an age (number or convertible), return multiplier in (0,1] to apply to metrics.
-    - If age <= cutoff => 1.0 (no penalty)
-    - If age > cutoff => exp(-rate * (years_past ** exponent))
-    - If min_multiplier provided => clamp to that floor
-    - On invalid age => 1.0
-    """
+def compute_age_multiplier(age, level=None):
     try:
         age_val = float(age)
     except Exception:
         return 1.0
-
-    cfg = _get_age_penalty_config()
+    cfg = _get_age_penalty_config_for_level(level)
     cutoff = cfg["cutoff_age"]
     rate = cfg["rate"]
     exponent = cfg["exponent"]
     min_mult = cfg["min_multiplier"]
-
     if age_val <= cutoff:
         return 1.0
-
     years_past = age_val - cutoff
-    # defensive: ensure non-negative
     if years_past <= 0:
         return 1.0
-
     try:
         mult = math.exp(-rate * (years_past ** exponent))
     except Exception:
         mult = 1.0
-
     if min_mult is not None:
         try:
             mm = float(min_mult)
             mult = max(mm, mult)
         except Exception:
             pass
-
-    # clamp to [0.0, 1.0]
     mult = max(0.0, min(1.0, float(mult)))
     return mult
 
-def apply_age_penalty_to_df(df):
-    """
-    Expects df with 'Age', 'PerformanceMetric', 'UsageMetric' columns.
-    Returns a copy with PerformanceMetric and UsageMetric multiplied by age multiplier.
-    """
-    if "Age" not in df.columns:
-        # nothing to do
-        return df
+def _infer_level_from_source_file(src_filename):
+    if not src_filename:
+        return None
+    name = os.path.basename(str(src_filename))
+    if name.lower().endswith(".csv"):
+        name = name[:-4]
+    parts = name.replace("_", "-").split("-")
+    last = parts[-1].strip()
+    last_up = last.upper()
+    if last_up in ("MLB", "AAA", "AA", "A"):
+        return last_up
+    if last_up in ("A+", "APLUS", "A-ADVANCED", "HIGHA", "HIGH-A", "HIGH_A"):
+        return "A+"
+    if "ROOKIE" in last_up:
+        return "Rookie"
+    return last_up
 
+# -----------------------
+# Level weighting helper (new)
+# -----------------------
+def get_level_multiplier(level):
+    """
+    Lookup LEVEL_WEIGHTS in batter_weights with safe fallback.
+    Returns float >= 0.0 (default 1.0).
+    """
+    try:
+        lvl = _canonicalize_level(level) or "default"
+        all_lvl = getattr(bw, "LEVEL_WEIGHTS", {}) or {}
+        # Try exact/title/upper fallbacks
+        if lvl in all_lvl:
+            val = all_lvl[lvl]
+        elif lvl.upper() in all_lvl:
+            val = all_lvl[lvl.upper()]
+        elif lvl.title() in all_lvl:
+            val = all_lvl[lvl.title()]
+        else:
+            val = all_lvl.get("default", 1.0)
+        return float(val)
+    except Exception:
+        return 1.0
+
+# -----------------------
+# apply age penalty
+# -----------------------
+def apply_age_penalty_to_df(df):
+    if "Age" not in df.columns:
+        return df
     df = df.copy()
-    # compute multiplier column
-    df["_age_mult"] = df["Age"].apply(lambda a: compute_age_multiplier(a))
-    # apply to metrics only if they exist
+    if "Level" not in df.columns:
+        if "__source_file" in df.columns:
+            df["Level"] = df["__source_file"].apply(_infer_level_from_source_file)
+        else:
+            df["Level"] = None
+    df["_age_mult"] = df.apply(lambda r: compute_age_multiplier(r.get("Age", None), level=r.get("Level", None)), axis=1)
     if "PerformanceMetric" in df.columns:
         df["PerformanceMetric"] = pd.to_numeric(df["PerformanceMetric"], errors="coerce").fillna(0.0) * df["_age_mult"]
     if "UsageMetric" in df.columns:
         df["UsageMetric"] = pd.to_numeric(df["UsageMetric"], errors="coerce").fillna(0.0) * df["_age_mult"]
-
-    # keep the multiplier for debugging/inspection if desired
     return df
 
 # -----------------------
@@ -139,7 +214,6 @@ def apply_age_penalty_to_df(df):
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
-
     all_df = read_and_concat(args.input_dir)
 
     # Filter by Level column if provided
@@ -148,7 +222,6 @@ def main():
             mask = all_df["Level"].astype(str).str.upper() == str(args.level).upper()
             level_df = all_df[mask].copy()
         else:
-            # No Level column -> assume files passed are of the requested level
             level_df = all_df.copy()
     else:
         level_df = all_df.copy()
@@ -156,28 +229,55 @@ def main():
     if level_df.empty:
         raise SystemExit(f"No players found for level='{args.level}'")
 
-    # Ensure required metric columns exist
     if "PerformanceMetric" not in level_df.columns:
         raise SystemExit("PerformanceMetric not found in input CSVs. Run evaluator first.")
     if "UsageMetric" not in level_df.columns:
         raise SystemExit("UsageMetric not found in input CSVs. Run evaluator first.")
 
-    # -------------------------
-    # Apply aging penalty here
-    # -------------------------
+    # Apply aging penalty (level-aware)
     level_df = apply_age_penalty_to_df(level_df)
 
-    # Compute scaled PerformanceMetric (0-100)
-    _, perf_scaled = compute_z_scaled(level_df["PerformanceMetric"])
-    level_df["perf_scaled"] = perf_scaled.round(6)
+    # show counts per Level for diagnostics
+    try:
+        grp = level_df.groupby("Level", dropna=False).size().sort_values(ascending=False)
+        print("Counts by Level after inference:")
+        print(grp.to_string())
+    except Exception:
+        pass
 
-    # Compute scaled UsageMetric (0-100) using same deterministic mapping
-    _, use_scaled = compute_z_scaled(level_df["UsageMetric"])
-    level_df["use_scaled"] = use_scaled.round(6)
+    # Compute scaled PerformanceMetric and UsageMetric
+    if args.per_level_scale:
+        def scale_group(g):
+            _, scaled_perf = compute_z_scaled(g["PerformanceMetric"])
+            g["perf_scaled"] = scaled_perf.round(6)
+            _, scaled_use = compute_z_scaled(g["UsageMetric"])
+            g["use_scaled"] = scaled_use.round(6)
+            return g
+        level_df = level_df.groupby("Level", dropna=False, group_keys=False).apply(scale_group)
+    else:
+        _, perf_scaled = compute_z_scaled(level_df["PerformanceMetric"])
+        level_df["perf_scaled"] = perf_scaled.round(6)
+        _, use_scaled = compute_z_scaled(level_df["UsageMetric"])
+        level_df["use_scaled"] = use_scaled.round(6)
 
     # Combined using perf_share
     perf_share = get_perf_share()
     level_df["combined_scaled"] = (perf_share * level_df["perf_scaled"] + (1.0 - perf_share) * level_df["use_scaled"]).round(6)
+
+    # -----------------------
+    # Apply level multiplier (new)
+    # -----------------------
+    # compute and attach multiplier per-row
+    level_df["_level_mult"] = level_df["Level"].apply(get_level_multiplier)
+    # apply to combined score and clamp to [0,100]
+    level_df["combined_scaled"] = (level_df["combined_scaled"] * level_df["_level_mult"]).clip(0.0, 100.0).round(6)
+
+    # optional: print some stats about multipliers used
+    try:
+        print("Level multipliers summary:")
+        print(level_df.groupby("_level_mult").size().sort_values(ascending=False).to_string())
+    except Exception:
+        pass
 
     # Build the compact output
     output_df = pd.DataFrame({
@@ -192,7 +292,6 @@ def main():
         "combined": level_df["combined_scaled"],
     })
 
-    # Save master aggregated file
     level_tag = args.level.upper() if args.level else "ALL"
     master_out = os.path.join(args.output_dir, f"all_players_{level_tag}_formatted.csv")
     output_df.to_csv(master_out, index=False)

@@ -2,8 +2,8 @@ import csv
 import os
 
 # Testing Purposes - Determine which actions to run
-fetch_new_data = True # Default: True
-process_data = True # Default: True
+fetch_new_data = False # Default: True
+process_data = False # Default: True
 aggreggate_data = True # Default: True
 run_for_one_team = False # Default: False
 
@@ -14,7 +14,8 @@ aggreggated_data_path = "aggregated_data/"
 
 # Teams and Levels
 teams_list = "../all-teams.csv"
-levels = ["MLB", "AAA", "AA", "A+", "A", "Rookie"]
+# levels = ["MLB", "AAA", "AA", "A+", "A", "Rookie"]
+levels = ["MLB", "AAA", "AA", "A+", "A"]
 
 def clear_data(path):
     os.system(f"rm -rf {path}")
@@ -52,7 +53,6 @@ with open(teams_list, newline='') as file:
             if process_data:
                 for level in levels:
                     os.system(f"python evaluate_batters.py {scraped_data_path}{team[0]}-{level}.csv {processed_data_path}{team[0]}-{level}.csv")
-                    break
 
             # Stop the loop from running for multiple teams if we're only testing the algorithm
             if run_for_one_team:
@@ -60,12 +60,15 @@ with open(teams_list, newline='') as file:
     
 # Scraping Complete. Aggreggate the data
 if aggreggate_data:
+    '''
     os.system(
     "python aggregate_and_scale.py "
     "--input-dir processed_data "
     "--output-dir aggregated_data "
     "--level MLB"
     )
+    '''
+    os.system(f"python aggregate_and_scale.py")
 
 # Display the outputs
 os.system(f"python print_outputs.py")

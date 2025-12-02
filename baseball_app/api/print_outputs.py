@@ -1,7 +1,8 @@
 import pandas as pd
 import os
 
-agg_file = "aggregated_data/all_players_MLB_formatted.csv"
+#agg_file = "aggregated_data/all_players_MLB_formatted.csv"
+agg_file = "aggregated_data/all_players_ALL_formatted.csv"
 
 metric = "combined"
 

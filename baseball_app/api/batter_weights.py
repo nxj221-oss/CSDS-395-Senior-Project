@@ -61,3 +61,14 @@ AGE_PENALTY = {
     "exponent": 0.25, # 1.25
     "min_multiplier": None,
 }
+
+# Level weighting: boost or damp players based on the level they play at.
+LEVEL_WEIGHTS = {
+    "default": 1.0,
+    "MLB": 1.15,
+    "AAA": 1.08,
+    "AA": 1.00,
+    "A+": 0.95,
+    "A": 0.90,
+    "Rookie": 0.85,
+}
