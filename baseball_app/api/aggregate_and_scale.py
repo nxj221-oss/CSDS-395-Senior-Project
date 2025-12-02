@@ -115,6 +115,81 @@ def _infer_level_from_source_file(src_filename):
     return last_up
 
 # -----------------------
+# AB penalty helpers (level-aware)
+# -----------------------
+def _get_ab_penalty_config_for_level(level):
+    """
+    Look up level-specific AB penalty config from bw.AB_PENALTY.
+    Returns a dict with keys:
+      - min_ab: AB threshold where penalty stops (default 200.0)
+      - exponent: exponent for scaling (default 1.0)
+      - min_multiplier: floor for multiplier (default 0.0 / None -> no floor)
+    """
+    try:
+        all_cfg = getattr(bw, "AB_PENALTY", {}) or {}
+        lvl = _canonicalize_level(level) or "default"
+        if isinstance(all_cfg, dict):
+            if lvl in all_cfg:
+                cfg = all_cfg[lvl]
+            elif lvl.upper() in all_cfg:
+                cfg = all_cfg[lvl.upper()]
+            elif lvl.title() in all_cfg:
+                cfg = all_cfg[lvl.title()]
+            else:
+                cfg = all_cfg.get("default", {})
+        else:
+            cfg = {}
+    except Exception:
+        cfg = {}
+    return {
+        "min_ab": float(cfg.get("min_ab", cfg.get("threshold", 200.0))),
+        "exponent": float(cfg.get("exponent", 1.0)),
+        "min_multiplier": cfg.get("min_multiplier", cfg.get("min_mult", None)),
+    }
+
+def compute_ab_multiplier(ab, level=None):
+    """
+    Compute an AB-based multiplier (0..1).
+    - If AB is >= min_ab -> 1.0
+    - If AB is missing or invalid -> 1.0 (no penalty)
+    - Otherwise multiplier = (AB / min_ab) ** exponent, clamped and floored by min_multiplier.
+    """
+    try:
+        ab_val = float(ab)
+    except Exception:
+        return 1.0
+
+    cfg = _get_ab_penalty_config_for_level(level)
+    min_ab = max(0.0, float(cfg.get("min_ab", 200.0)))
+    exponent = float(cfg.get("exponent", 1.0))
+    min_mult = cfg.get("min_multiplier", None)
+
+    if min_ab <= 0:
+        return 1.0
+
+    if ab_val >= min_ab:
+        return 1.0
+
+    if ab_val <= 0:
+        mult = 0.0
+    else:
+        try:
+            ratio = ab_val / min_ab
+            mult = ratio ** exponent
+        except Exception:
+            mult = 1.0
+
+    if min_mult is not None:
+        try:
+            mm = float(min_mult)
+            mult = max(mm, mult)
+        except Exception:
+            pass
+
+    mult = max(0.0, min(1.0, float(mult)))
+    return mult
+
+# -----------------------
 # Age penalty helpers (level-aware)
 # -----------------------
 def _get_age_penalty_config_for_level(level):
@@ -274,18 +349,24 @@ def apply_age_penalty_to_df(df):
         else:
             df["Level"] = None
 
-    # compute both multipliers per-row
+        # compute both multipliers per-row
     def _compute_mults(row):
         age = row.get("Age", None)
         level = row.get("Level", None)
         age_mult = compute_age_multiplier(age, level)
         age_level_mult = compute_age_to_level_multiplier(age, level)
-        total = float(age_mult) * float(age_level_mult)
+
+        # AB penalty
+        ab = row.get("AB", None)
+        ab_mult = compute_ab_multiplier(ab, level)
+
+        total = float(age_mult) * float(age_level_mult) * float(ab_mult)
         # clamp (0..1)
         total = max(0.0, min(1.0, total))
         return pd.Series({
             "_age_mult": age_mult,
             "_age_level_mult": age_level_mult,
+            "_ab_mult": ab_mult,
             "_total_age_mult": total
         })
 
@@ -364,6 +445,20 @@ def main():
     # Apply level multiplier (existing)
     level_df["_level_mult"] = level_df["Level"].apply(get_level_multiplier)
     level_df["combined_scaled"] = (level_df["combined_scaled"] * level_df["_level_mult"]).clip(0.0, 100.0).round(6)
+
+    # Remove duplicate players by taking the highest number of AB's
+    def dedupe_highest_ab(df):
+        if "Player" not in df.columns:
+            return df
+        df["_player_key"] = df["Player"].astype(str).str.strip().str.casefold()
+        # ensure numeric AB
+        df["_AB_numeric"] = pd.to_numeric(df.get("AB", 0), errors="coerce").fillna(0)
+        idx = df.groupby("_player_key")["_AB_numeric"].idxmax().dropna().astype(int)
+        deduped = df.loc[idx].copy()
+        deduped = deduped.drop(columns=["_player_key", "_AB_numeric"])
+        return deduped
+
+    level_df = dedupe_highest_ab(level_df)
 
     # optional: summarize multipliers used
     try:

@@ -97,17 +97,6 @@ def collect_data(team, pos):
     output_path = f"scraped_data/{team}-A.csv"
     a.to_csv(output_path, index=False)
 
-    # Rookie
-    base_url = f"https://www.fangraphs.com/api/leaders/minor-league/data?pos={pos}&level=6&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32&stats=bat&qual=50&type=0&team=all&season=2025&seasonEnd=2025&org={org_to_id[team]}&ind=0&splitTeam=false"
-    
-    r = pd.read_json(base_url)
-    r = r.filter(['PlayerName', 'Age', 'PO', 'PA', 'AB', 'R', 'H', '2B', '3B', 'HR', 'RBI', 'BB', 'SO', 'SB', 'CS'], axis=1)
-    r = r.rename(columns={"PlayerName": "Name"})
-
-    output_path = f"scraped_data/{team}-Rookie.csv"
-    r.to_csv(output_path, index=False)
-
-
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python scrapeFangraphs.py [location-team] [position]")

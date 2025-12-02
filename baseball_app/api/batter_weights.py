@@ -47,11 +47,11 @@ HANDEDNESS_WEIGHTS = {
 # Age-to-Level Adjustment Factors
 AGE_TO_LEVEL_WEIGHTS = {
     "Rookie": {"age": 19, "deviation": 2.0, "younger_boost": 0.5, "older_penalty": 0.5},
-    "A":      {"age": 21, "deviation": 2.5, "younger_boost": 0.5, "older_penalty": 0.5},
-    "A+":     {"age": 22.5, "deviation": 2.5, "younger_boost": 0.5, "older_penalty": 0.5},
-    "AA":     {"age": 24, "deviation": 3.0, "younger_boost": 0.5, "older_penalty": 0.5},
-    "AAA":    {"age": 25.5, "deviation": 3.5, "younger_boost": 0.5, "older_penalty": 0.5},
-    "MLB":    {"age": 29.5, "deviation": 3.75, "younger_boost": 0.25, "older_penalty": 0.50},
+    "A":      {"age": 21, "deviation": 2.5, "younger_boost": 1.5, "older_penalty": 0.5},
+    "A+":     {"age": 22.5, "deviation": 2.5, "younger_boost": 1.5, "older_penalty": 0.5},
+    "AA":     {"age": 24, "deviation": 3.0, "younger_boost": 1.75, "older_penalty": 0.5},
+    "AAA":    {"age": 25.5, "deviation": 3.5, "younger_boost": 1.0, "older_penalty": 2.5},
+    "MLB":    {"age": 29.5, "deviation": 3.75, "younger_boost": 1.0, "older_penalty": 1.50},
 }
 
 # Age Penalties
@@ -70,5 +70,13 @@ LEVEL_WEIGHTS = {
     "AA": 1.00,
     "A+": 0.995,
     "A": 0.99,
-    "Rookie": 0.98,
+    "Rookie": 0.985,
+}
+
+# AB penalty defaults (per-level optional)
+AB_PENALTY = {
+    "default": {"min_ab": 200, "exponent": 1.0, "min_multiplier": 0.2},
+    "MLB": {"min_ab": 300, "exponent": 1.0, "min_multiplier": 0.25},
+    "AAA": {"min_ab": 200, "exponent": 1.0, "min_multiplier": 0.2},
+    "AA": {"min_ab": 150, "exponent": 1.0, "min_multiplier": 0.15},
 }
