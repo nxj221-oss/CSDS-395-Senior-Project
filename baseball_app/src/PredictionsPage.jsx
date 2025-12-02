@@ -3,6 +3,7 @@ import { Box, Typography, Card, CardContent, TextField, InputAdornment, IconButt
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { DataGrid } from '@mui/x-data-grid';
+import { BarChart, Bar, LineChart, Line, ScatterChart, Scatter, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const columns = [
   { field: 'rank', headerName: 'Rank', width: 50 },
@@ -17,6 +18,8 @@ const columns = [
   { field: 'use', headerName: 'Usage', width: 120 },
   { field: 'combined', headerName: 'Combined', width: 120 },
 ];
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B9D'];
 
 function PredictionsPage() {
   const [searchInput, setSearchInput] = React.useState('');
@@ -56,6 +59,65 @@ function PredictionsPage() {
       return passesSearch && passesTeam && passesAge && passesLevel && passesPosition;
     });
   }, [debouncedSearch, selectedTeams, selectedAges, selectedLevels, selectedPositions, rows]);
+
+  // Chart Data Calculations
+  const ageDistribution = React.useMemo(() => {
+    const ageCounts = {};
+    filteredRows.forEach(row => {
+      ageCounts[row.Age] = (ageCounts[row.Age] || 0) + 1;
+    });
+    return Object.entries(ageCounts)
+      .map(([age, count]) => ({ age: Number(age), count }))
+      .sort((a, b) => a.age - b.age);
+  }, [filteredRows]);
+
+  const teamDistribution = React.useMemo(() => {
+    const teamCounts = {};
+    filteredRows.forEach(row => {
+      teamCounts[row.team] = (teamCounts[row.team] || 0) + 1;
+    });
+    return Object.entries(teamCounts)
+      .map(([team, count]) => ({ team, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [filteredRows]);
+
+  const positionDistribution = React.useMemo(() => {
+    const posCounts = {};
+    filteredRows.forEach(row => {
+      posCounts[row.PO] = (posCounts[row.PO] || 0) + 1;
+    });
+    return Object.entries(posCounts)
+      .map(([position, value]) => ({ position, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredRows]);
+
+  const performanceByAge = React.useMemo(() => {
+    const agePerf = {};
+    filteredRows.forEach(row => {
+      if (!agePerf[row.Age]) {
+        agePerf[row.Age] = { total: 0, count: 0 };
+      }
+      agePerf[row.Age].total += parseFloat(row.perf) || 0;
+      agePerf[row.Age].count += 1;
+    });
+    return Object.entries(agePerf)
+      .map(([age, data]) => ({ 
+        age: Number(age), 
+        avgPerformance: data.total / data.count 
+      }))
+      .sort((a, b) => a.age - b.age);
+  }, [filteredRows]);
+
+  const performanceVsUsage = React.useMemo(() => {
+    return filteredRows
+      .filter(row => row.perf && row.use)
+      .map(row => ({
+        performance: parseFloat(row.perf),
+        usage: parseFloat(row.use),
+        player: row.Player
+      }));
+  }, [filteredRows]);
 
   return (
     <Box>
@@ -203,6 +265,113 @@ function PredictionsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Visualizations Section - NEW CODE STARTS HERE */}
+      <Typography variant="h4" sx={{ mt: 5, mb: 3 }}>
+        Data Visualizations
+      </Typography>
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Age Distribution */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Age Distribution
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={ageDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="age" label={{ value: 'Age', position: 'insideBottom', offset: -5 }} />
+                <YAxis label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#0088FE" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Position Distribution */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Position Distribution
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={positionDistribution}
+                  dataKey="value"
+                  nameKey="position"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={(entry) => entry.position}
+                >
+                  {positionDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Team Distribution */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Top 10 Teams by Player Count
+            </Typography>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={teamDistribution} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis type="category" dataKey="team" width={150} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#00C49F" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Average Performance by Age */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Average Performance by Age
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={performanceByAge}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="age" label={{ value: 'Age', position: 'insideBottom', offset: -5 }} />
+                <YAxis label={{ value: 'Avg Performance', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="avgPerformance" stroke="#8884D8" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Performance vs Usage Scatter Plot */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Performance vs Usage
+            </Typography>
+            <ResponsiveContainer width="100%" height={350}>
+              <ScatterChart>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="usage" name="Usage" label={{ value: 'Usage', position: 'insideBottom', offset: -5 }} />
+                <YAxis dataKey="performance" name="Performance" label={{ value: 'Performance', angle: -90, position: 'insideLeft' }} />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                <Scatter data={performanceVsUsage} fill="#FF8042" />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Box>
     </Box>
   );
 }
