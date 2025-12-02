@@ -2,7 +2,7 @@ import csv
 import os
 
 # Testing Purposes - Determine which actions to run
-fetch_new_data = True # Default: True
+fetch_new_data = False # Default: True
 process_data = True # Default: True
 aggreggate_data = True # Default: True
 run_for_one_team = False # Default: False

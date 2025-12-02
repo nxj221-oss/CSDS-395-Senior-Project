@@ -1,6 +1,6 @@
 # B,Age,PO,PA,AB,R,H,2B,3B,HR,RBI,BB,SO,SB,CS
 
-performance_weighting_percent = 0.5  # Percentage weight for performance vs. usage
+performance_weighting_percent = 0.625  # Percentage weight for performance vs. usage
 
 # Configuration and Weights
 PERFORMANCE_WEIGHTS = {
@@ -46,17 +46,17 @@ HANDEDNESS_WEIGHTS = {
 
 # Age-to-Level Adjustment Factors
 AGE_TO_LEVEL_WEIGHTS = {
-    "Rookie": {"age": 19, "deviation": 2.0, "younger_boost": 0.30, "older_penalty": 0.20},
-    "A":      {"age": 21, "deviation": 2.5, "younger_boost": 0.25, "older_penalty": 0.18},
-    "A+":     {"age": 22.5, "deviation": 2.5, "younger_boost": 0.20, "older_penalty": 0.18},
-    "AA":     {"age": 24, "deviation": 3.0, "younger_boost": 0.18, "older_penalty": 0.15},
-    "AAA":    {"age": 27, "deviation": 3.5, "younger_boost": 0.15, "older_penalty": 0.12},
+    "Rookie": {"age": 19, "deviation": 2.0, "younger_boost": 0.5, "older_penalty": 0.5},
+    "A":      {"age": 21, "deviation": 2.5, "younger_boost": 0.5, "older_penalty": 0.5},
+    "A+":     {"age": 22.5, "deviation": 2.5, "younger_boost": 0.5, "older_penalty": 0.5},
+    "AA":     {"age": 24, "deviation": 3.0, "younger_boost": 0.5, "older_penalty": 0.5},
+    "AAA":    {"age": 25.5, "deviation": 3.5, "younger_boost": 0.5, "older_penalty": 0.5},
     "MLB":    {"age": 29.5, "deviation": 3.75, "younger_boost": 0.25, "older_penalty": 0.50},
 }
 
 # Age Penalties
 AGE_PENALTY = {
-    "cutoff_age": 27.0, # 31.0
+    "cutoff_age": 26.0, # 31.0
     "rate": 0.125, # 0.5
     "exponent": 0.25, # 1.25
     "min_multiplier": None,
@@ -65,10 +65,10 @@ AGE_PENALTY = {
 # Level weighting: boost or damp players based on the level they play at.
 LEVEL_WEIGHTS = {
     "default": 1.0,
-    "MLB": 1.15,
-    "AAA": 1.08,
+    "MLB": 1.05,
+    "AAA": 1.01,
     "AA": 1.00,
-    "A+": 0.95,
-    "A": 0.90,
-    "Rookie": 0.85,
+    "A+": 0.995,
+    "A": 0.99,
+    "Rookie": 0.98,
 }
