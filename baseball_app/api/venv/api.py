@@ -16,10 +16,9 @@ def formatTeamName(x):
 @app.route('/api/playerData')
 def get_player_data():
    # get data
-   df = pd.read_csv('../aggregated_data/all_players_ALL_formatted.csv')
+   df = pd.read_csv('../algorithm_output/all_players_sorted.csv')
 
    # format team column and add level column
-   df = df.rename(columns={"team.csv": "team"})
    df['level'] = df.apply(lambda row: formatLevel(row), axis = 1)
    df = df.map(lambda x: formatTeamName(x))
 

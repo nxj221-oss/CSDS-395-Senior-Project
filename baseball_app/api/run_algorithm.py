@@ -10,7 +10,7 @@ aggreggate_data = True
 scraped_data_path = "scraped_data/"
 processed_data_path = "processed_data/"
 aggreggated_data_path = "aggregated_data/"
-output_path = "alforithm_output/"
+output_path = "algorithm_output/"
 
 # Teams and Levels
 teams_list = "../all-teams.csv"
