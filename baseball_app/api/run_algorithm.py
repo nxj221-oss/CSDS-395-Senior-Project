@@ -45,9 +45,7 @@ with open(teams_list, newline='') as file:
                 os.system(f"python scrapeFangraphs.py {team[0]}")
                 
                 # Process each of the MiLB affiliate teams (aaa,aa,high-a,single-a,rookie)
-                for index in range(1, 5):
-                    os.system(f"python scrape-minors.py {team[index]} {team[0]} {levels[index]}")
-                    #break # TODO: Remove -- this line just ensures only the AAA players have their data scraped
+                os.system(f"python scrape-minors2.py {team[0]} all")
 
 
             # Run the algorithm
