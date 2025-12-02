@@ -5,6 +5,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { DataGrid } from '@mui/x-data-grid';
 
 const columns = [
+  { field: 'rank', headerName: 'Rank', width: 50 },
   { field: 'Player', headerName: 'Player Name', width: 180 },
   { field: 'B', headerName: 'B', width: 70 },
   { field: 'Age', headerName: 'Age', width: 70 },
@@ -50,7 +51,7 @@ function PredictionsPage() {
         || String(r.team).toLowerCase().includes(query);
       const passesTeam = selectedTeams.length === 0 || r.team.includes(selectedTeams);
       const passesAge = selectedAges.length === 0 || selectedAges.includes(r.Age);
-      const passesLevel = selectedLevels.length === 0 || r.level.includes(selectedLevels);
+      const passesLevel = selectedLevels.length === 0 || selectedLevels.includes(r.level);
       const passesPosition = selectedPositions.length === 0 || selectedPositions.includes(r.PO);
       return passesSearch && passesTeam && passesAge && passesLevel && passesPosition;
     });
@@ -62,7 +63,7 @@ function PredictionsPage() {
         Predictions Explorer
       </Typography>
       <Typography variant="body1" sx={{ color: 'white', mb: 4 }}>
-        This page displays individual player predictions. You can filter, sort, and explore player-level data including team, age, and performance(HAS TO BE ADDED).
+        This page displays individual player predictions. You can filter, sort, and explore player-level data including team, age, and performance.
       </Typography>
 
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
