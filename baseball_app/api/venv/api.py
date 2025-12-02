@@ -4,22 +4,24 @@ import pandas as pd
 
 app = Flask(__name__)
 
+def formatLevel(row):
+  list = str(row.team).replace('.csv', '').split('-')
+  return list.pop(len(list)-1)
+
 def formatTeamName(x):
   if str(x).endswith('.csv'):
-    return str(x).replace('.csv', '').replace('-', ' ').title()
+    return str(x).replace('.csv', '').replace('MLB', '').replace('AAA', '').replace('AA', '').replace('A+', '').replace('A', '').replace('Rookie', '').replace('-', ' ').title()
   return x
 
 @app.route('/api/playerData')
 def get_player_data():
    # get data
-   df = pd.read_csv('../aggregated_data/all_players_MLB_formatted.csv')
+   df = pd.read_csv('../aggregated_data/all_players_ALL_formatted.csv')
 
-   # format team column
+   # format team column and add level column
    df = df.rename(columns={"team.csv": "team"})
+   df['level'] = df.apply(lambda row: formatLevel(row), axis = 1)
    df = df.map(lambda x: formatTeamName(x))
-
-   # add level column
-   df['level'] = "MLB"
 
    # handle duplicate players --> average metrics into one entry weighted based off AB(at bats)
    duplicates = df[df.duplicated(subset='Player')]

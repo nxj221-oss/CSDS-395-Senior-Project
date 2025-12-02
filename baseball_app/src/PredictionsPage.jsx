@@ -37,20 +37,20 @@ function PredictionsPage() {
     });
   }, []);
 
-  const teamOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.team))).sort(), [rows]);
+  const teamOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.team))).filter(l => !l.includes('/')).sort(), [rows]);
   const ageOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.Age))).sort((a, b) => a - b), [rows]);
-  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.level))).sort(), [rows]);
+  const levelOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.level))).filter(l => !l.includes('/')).sort(), [rows]);
   const positionOptions = React.useMemo(() => Array.from(new Set(rows.map(r => r.PO))).sort(), [rows]);
 
   const filteredRows = React.useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
     return rows.filter((r) => {
       const passesSearch = !query ||
-        String(r.Player).toLowerCase().includes(query);
-        //|| String(r.team).toLowerCase().includes(query);
-      const passesTeam = selectedTeams.length === 0 || selectedTeams.includes(r.team);
+        String(r.Player).toLowerCase().includes(query)
+        || String(r.team).toLowerCase().includes(query);
+      const passesTeam = selectedTeams.length === 0 || r.team.includes(selectedTeams);
       const passesAge = selectedAges.length === 0 || selectedAges.includes(r.Age);
-      const passesLevel = selectedLevels.length === 0 || selectedLevels.includes(r.level);
+      const passesLevel = selectedLevels.length === 0 || r.level.includes(selectedLevels);
       const passesPosition = selectedPositions.length === 0 || selectedPositions.includes(r.PO);
       return passesSearch && passesTeam && passesAge && passesLevel && passesPosition;
     });
