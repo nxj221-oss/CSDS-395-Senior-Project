@@ -3,8 +3,8 @@ import os
 
 # Testing Purposes - Determine which actions to run
 fetch_new_data = False # Default: True
-process_data = True # Default: True
-aggreggate_data = True # Default: True
+process_data = False # Default: True
+aggreggate_data = False # Default: True
 run_for_one_team = False # Default: False
 
 # Directory Paths
@@ -70,6 +70,7 @@ if aggreggate_data:
     '''
     os.system(f"python aggregate_and_scale.py")
 
-# Display the outputs
-os.system(f"python print_outputs.py")
+    # Display the outputs
+    os.system(f"python print_outputs.py 0")
+    print('\nOutput file saved to algorithm_output/all_players_sorted.csv')
 

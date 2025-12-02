@@ -3,9 +3,10 @@
 aggregate_and_scale.py
 
 Reads per-team CSV files from --input-dir, applies level-aware age penalties
-(using configs in batter_weights.AGE_PENALTY), computes z-scaled performance
-and usage metrics, applies a level multiplier from batter_weights.LEVEL_WEIGHTS,
-and writes a compact aggregated CSV per requested level (or ALL if --level omitted).
+(using configs in batter_weights.AGE_PENALTY), applies age-to-level adjustments
+(using AGE_TO_LEVEL_WEIGHTS), computes z-scaled performance and usage metrics,
+applies a level multiplier from batter_weights.LEVEL_WEIGHTS, and writes a compact
+aggregated CSV per requested level (or ALL if --level omitted).
 """
 
 import os
@@ -75,7 +76,7 @@ def get_perf_share():
     return 0.7
 
 # -----------------------
-# Age penalty helpers (level-aware)
+# Level canonicalization + inference
 # -----------------------
 def _canonicalize_level(level_str):
     if level_str is None:
@@ -96,6 +97,26 @@ def _canonicalize_level(level_str):
     cleaned = cleaned.replace(".", "").replace(" ", "").replace("_", "")
     return cleaned
 
+def _infer_level_from_source_file(src_filename):
+    if not src_filename:
+        return None
+    name = os.path.basename(str(src_filename))
+    if name.lower().endswith(".csv"):
+        name = name[:-4]
+    parts = name.replace("_", "-").split("-")
+    last = parts[-1].strip()
+    last_up = last.upper()
+    if last_up in ("MLB", "AAA", "AA", "A"):
+        return last_up
+    if last_up in ("A+", "APLUS", "A-ADVANCED", "HIGHA", "HIGH-A", "HIGH_A"):
+        return "A+"
+    if "ROOKIE" in last_up:
+        return "Rookie"
+    return last_up
+
+# -----------------------
+# Age penalty helpers (level-aware)
+# -----------------------
 def _get_age_penalty_config_for_level(level):
     try:
         all_cfg = getattr(bw, "AGE_PENALTY", {}) or {}
@@ -148,35 +169,78 @@ def compute_age_multiplier(age, level=None):
     mult = max(0.0, min(1.0, float(mult)))
     return mult
 
-def _infer_level_from_source_file(src_filename):
-    if not src_filename:
+# -----------------------
+# AGE_TO_LEVEL helpers (new)
+# -----------------------
+def _get_age_to_level_cfg(level):
+    """
+    Return the config dict from bw.AGE_TO_LEVEL_WEIGHTS for the canonical level.
+    Fallback: None (no adjustment).
+    """
+    try:
+        all_cfg = getattr(bw, "AGE_TO_LEVEL_WEIGHTS", {}) or {}
+        lvl = _canonicalize_level(level)
+        if not lvl:
+            return None
+        # try common forms
+        if lvl in all_cfg:
+            return all_cfg[lvl]
+        if lvl.title() in all_cfg:
+            return all_cfg[lvl.title()]
+        if lvl.upper() in all_cfg:
+            return all_cfg[lvl.upper()]
+    except Exception:
         return None
-    name = os.path.basename(str(src_filename))
-    if name.lower().endswith(".csv"):
-        name = name[:-4]
-    parts = name.replace("_", "-").split("-")
-    last = parts[-1].strip()
-    last_up = last.upper()
-    if last_up in ("MLB", "AAA", "AA", "A"):
-        return last_up
-    if last_up in ("A+", "APLUS", "A-ADVANCED", "HIGHA", "HIGH-A", "HIGH_A"):
-        return "A+"
-    if "ROOKIE" in last_up:
-        return "Rookie"
-    return last_up
+    return None
+
+def compute_age_to_level_multiplier(age, level):
+    """
+    Compute multiplier based on AGE_TO_LEVEL_WEIGHTS:
+    - If player is significantly younger than expected -> boost up to younger_boost
+    - If player is significantly older -> penalty up to older_penalty
+    Linear ramp over one 'deviation' window; clamped.
+    """
+    try:
+        age_val = float(age)
+    except Exception:
+        return 1.0
+
+    cfg = _get_age_to_level_cfg(level)
+    if not cfg:
+        return 1.0
+
+    expected = float(cfg.get("age", cfg.get("expected_age", cfg.get("expected", float("nan")))))
+    deviation = float(cfg.get("deviation", 0.0))
+    younger_boost = float(cfg.get("younger_boost", 0.0))
+    older_penalty = float(cfg.get("older_penalty", 0.0))
+
+    # defensive
+    if math.isnan(expected) or deviation <= 0:
+        return 1.0
+
+    diff = age_val - expected
+    # Player much younger than expected_age - deviation => boost
+    if diff < -deviation:
+        amount = (expected - deviation) - age_val  # positive
+        normalized = min(1.0, amount / deviation)  # 0..1
+        mult = 1.0 + younger_boost * normalized
+        return max(0.0, float(mult))
+    # Player much older than expected_age + deviation => penalty
+    if diff > deviation:
+        amount = age_val - (expected + deviation)
+        normalized = min(1.0, amount / deviation)
+        mult = 1.0 - older_penalty * normalized
+        return max(0.0, float(mult))
+    # within acceptable band
+    return 1.0
 
 # -----------------------
-# Level weighting helper (new)
+# Level weighting helper
 # -----------------------
 def get_level_multiplier(level):
-    """
-    Lookup LEVEL_WEIGHTS in batter_weights with safe fallback.
-    Returns float >= 0.0 (default 1.0).
-    """
     try:
         lvl = _canonicalize_level(level) or "default"
         all_lvl = getattr(bw, "LEVEL_WEIGHTS", {}) or {}
-        # Try exact/title/upper fallbacks
         if lvl in all_lvl:
             val = all_lvl[lvl]
         elif lvl.upper() in all_lvl:
@@ -190,22 +254,50 @@ def get_level_multiplier(level):
         return 1.0
 
 # -----------------------
-# apply age penalty
+# apply age penalty + age-to-level adjustments
 # -----------------------
 def apply_age_penalty_to_df(df):
+    """
+    - infers Level if missing (from __source_file)
+    - computes _age_mult (exponential penalty for older players)
+    - computes _age_level_mult (based on AGE_TO_LEVEL_WEIGHTS boost/penalty for being young/old relative to level)
+    - multiplies both together and applies to PerformanceMetric and UsageMetric
+    """
     if "Age" not in df.columns:
         return df
+
     df = df.copy()
+
     if "Level" not in df.columns:
         if "__source_file" in df.columns:
             df["Level"] = df["__source_file"].apply(_infer_level_from_source_file)
         else:
             df["Level"] = None
-    df["_age_mult"] = df.apply(lambda r: compute_age_multiplier(r.get("Age", None), level=r.get("Level", None)), axis=1)
+
+    # compute both multipliers per-row
+    def _compute_mults(row):
+        age = row.get("Age", None)
+        level = row.get("Level", None)
+        age_mult = compute_age_multiplier(age, level)
+        age_level_mult = compute_age_to_level_multiplier(age, level)
+        total = float(age_mult) * float(age_level_mult)
+        # clamp (0..1)
+        total = max(0.0, min(1.0, total))
+        return pd.Series({
+            "_age_mult": age_mult,
+            "_age_level_mult": age_level_mult,
+            "_total_age_mult": total
+        })
+
+    mults = df.apply(_compute_mults, axis=1)
+    df = pd.concat([df, mults], axis=1)
+
+    # apply total multiplier to metrics
     if "PerformanceMetric" in df.columns:
-        df["PerformanceMetric"] = pd.to_numeric(df["PerformanceMetric"], errors="coerce").fillna(0.0) * df["_age_mult"]
+        df["PerformanceMetric"] = pd.to_numeric(df["PerformanceMetric"], errors="coerce").fillna(0.0) * df["_total_age_mult"]
     if "UsageMetric" in df.columns:
-        df["UsageMetric"] = pd.to_numeric(df["UsageMetric"], errors="coerce").fillna(0.0) * df["_age_mult"]
+        df["UsageMetric"] = pd.to_numeric(df["UsageMetric"], errors="coerce").fillna(0.0) * df["_total_age_mult"]
+
     return df
 
 # -----------------------
@@ -214,6 +306,7 @@ def apply_age_penalty_to_df(df):
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
+
     all_df = read_and_concat(args.input_dir)
 
     # Filter by Level column if provided
@@ -229,15 +322,16 @@ def main():
     if level_df.empty:
         raise SystemExit(f"No players found for level='{args.level}'")
 
+    # Ensure required metric columns exist
     if "PerformanceMetric" not in level_df.columns:
         raise SystemExit("PerformanceMetric not found in input CSVs. Run evaluator first.")
     if "UsageMetric" not in level_df.columns:
         raise SystemExit("UsageMetric not found in input CSVs. Run evaluator first.")
 
-    # Apply aging penalty (level-aware)
+    # Apply aging penalty + age-to-level adjustment (level-aware)
     level_df = apply_age_penalty_to_df(level_df)
 
-    # show counts per Level for diagnostics
+    # Diagnostic: counts by level
     try:
         grp = level_df.groupby("Level", dropna=False).size().sort_values(ascending=False)
         print("Counts by Level after inference:")
@@ -245,7 +339,10 @@ def main():
     except Exception:
         pass
 
+    # -------------------------
     # Compute scaled PerformanceMetric and UsageMetric
+    # Option: per-level scaling if requested (--per-level-scale)
+    # -------------------------
     if args.per_level_scale:
         def scale_group(g):
             _, scaled_perf = compute_z_scaled(g["PerformanceMetric"])
@@ -264,22 +361,20 @@ def main():
     perf_share = get_perf_share()
     level_df["combined_scaled"] = (perf_share * level_df["perf_scaled"] + (1.0 - perf_share) * level_df["use_scaled"]).round(6)
 
-    # -----------------------
-    # Apply level multiplier (new)
-    # -----------------------
-    # compute and attach multiplier per-row
+    # Apply level multiplier (existing)
     level_df["_level_mult"] = level_df["Level"].apply(get_level_multiplier)
-    # apply to combined score and clamp to [0,100]
     level_df["combined_scaled"] = (level_df["combined_scaled"] * level_df["_level_mult"]).clip(0.0, 100.0).round(6)
 
-    # optional: print some stats about multipliers used
+    # optional: summarize multipliers used
     try:
-        print("Level multipliers summary:")
-        print(level_df.groupby("_level_mult").size().sort_values(ascending=False).to_string())
+        print("Age multipliers summary (age_penalty, age_to_level, total):")
+        print(level_df[["_age_mult", "_age_level_mult", "_total_age_mult"]].describe().to_string())
+        print("Level multipliers summary (by _level_mult):")
+        print(level_df.groupby("_level_mult").size().to_string())
     except Exception:
         pass
 
-    # Build the compact output
+    # Build compact output (keeps team.csv source)
     output_df = pd.DataFrame({
         "Player": level_df.get("Player", ""),
         "B": level_df.get("B", ""),
