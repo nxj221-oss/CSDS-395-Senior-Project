@@ -8,39 +8,51 @@ import numpy as np
 import batter_weights as bw
 
 # -------- helpers --------
+# Safely convert a value to float, returning a default if invalid
 def safe_float(x, default=0.0):
     try:
         return float(x)
     except Exception:
         return default
 
+# Safe division: return 0 if denominator is zero
 def safe_div(n, d):
     if d:
         return n / d
     return 0.0
 
+# Compute rate-based offensive statistics (AVG, OBP, SLG)
 def compute_rate_stats(df):
     """Compute AVG, OBP, SLG, and helpful counts. Keep numeric types."""
     df = df.copy()
+    # Convert key counting stats to numeric (non-numeric -> 0)
     for c in ["PA", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "CS"]:
         df[c] = pd.to_numeric(df.get(c, 0), errors="coerce").fillna(0.0)
-
+        
+    # Compute derived stats
     df["1B"] = df["H"] - df["2B"] - df["3B"] - df["HR"]
     df["TB"] = df["1B"] + 2 * df["2B"] + 3 * df["3B"] + 4 * df["HR"]
+
+    # AVG = H / AB
     df["AVG"] = df.apply(lambda r: safe_div(r["H"], r["AB"]), axis=1)
-    # OBP approx: (H + BB) / PA (sac flies not available)
+    # OBP approx = (H + BB) / PA   (no sacrifice fly data available)
     df["OBP"] = df.apply(lambda r: safe_div((r["H"] + r["BB"]), r["PA"]), axis=1)
+
+    # SLG = TB / AB
     df["SLG"] = df.apply(lambda r: safe_div(r["TB"], r["AB"]), axis=1)
     return df
 
+# Lookup positional weight from config
 def positional_factor(pos):
     pos = str(pos).strip().upper()
     return bw.POSITIONAL_WEIGHTS.get(pos, bw.POSITIONAL_WEIGHTS.get("DEFAULT", 1.0))
 
+# Lookup handedness weight from config
 def handedness_factor(bats):
     bats = str(bats).strip().upper()
     return bw.HANDEDNESS_WEIGHTS.get(bats, bw.HANDEDNESS_WEIGHTS.get("DEFAULT", 1.0))
 
+# Age-to-level scoring with asymmetric penalties + exponential tail
 def age_to_level_score(age, level):
     """
     Aggressive tail penalty WITHOUT a floor:
@@ -50,39 +62,43 @@ def age_to_level_score(age, level):
         "age", "deviation", "younger_boost", "older_penalty",
         "cutoff_offset", "tail_alpha", "tail_beta"
     """
+    # Try to interpret age as float
     try:
         age = float(age)
     except Exception:
         return 1.0
 
+    # Get level-specific parameters
     level = str(level).strip()
     level_data = bw.AGE_TO_LEVEL_WEIGHTS.get(level)
     if not level_data:
         return 1.0
-
+        
+    # Extract parameters with defaults
     target = float(level_data.get("age", age))
     dev = float(level_data.get("deviation", 3.0))
-
     younger_boost = float(level_data.get("younger_boost", 0.25))
     older_penalty = float(level_data.get("older_penalty", 0.20))
-
     cutoff_offset = float(level_data.get("cutoff_offset", 3.0))
     tail_alpha = float(level_data.get("tail_alpha", 0.4))
     tail_beta = float(level_data.get("tail_beta", 1.5))
 
+    # Compute cutoff: after this age, use the exponential tail
     cutoff = target + cutoff_offset
 
+    # If player is within normal age range, use smooth curve
     if age <= cutoff:
         asym = (target - age) / dev
         proximity = math.exp(-((age - target) ** 2) / (2 * (dev ** 2)))
         signed = math.tanh(asym)
+        
+        # Younger → positive signed; older → negative
         if signed > 0:
             return 1.0 + signed * younger_boost * proximity
         else:
             return 1.0 + signed * older_penalty * proximity
 
-    # Above cutoff -> exponential decay tail (no floor)
-    years_past = age - cutoff
+    # Player is older than cutoff → apply exponential decay    years_past = age - cutoff
     tail_val = math.exp(-tail_alpha * (years_past ** tail_beta))
     return tail_val
 
@@ -105,7 +121,7 @@ def compute_performance_raw(df):
         # If it's a rate stat (AVG, OBP, SLG) we take it directly
         if col in ("AVG", "OBP", "SLG"):
             if col in df.columns:
-                perf += df[col].astype(float) * float(weight)
+                perf += df[col].astype(float)perf += pd.to_numeric(df[col], errors="coerce").fillna(0.0) * float(weight)* float(weight)
         else:
             # For counting stats, convert to per-PA rate to avoid opportunity bias
             if col in df.columns:
@@ -126,12 +142,12 @@ def compute_usage_raw(df):
 
     u = bw.USAGE_WEIGHTS
 
-    # defensive-position
+    # Defensive position component
     if u.get("defensive-position", 0):
         pos_vals = df["PO"].apply(positional_factor) if "PO" in df.columns else pd.Series(1.0, index=df.index)
         usage += pos_vals.astype(float) * float(u.get("defensive-position", 0.0))
 
-    # handedness
+    # Handedness component (B = batting side)
     if u.get("handedness", 0) and "B" in df.columns:
         hand_vals = df["B"].apply(handedness_factor)
         usage += hand_vals.astype(float) * float(u.get("handedness", 0.0))
@@ -163,6 +179,8 @@ def normalize_player_name(df):
 # -------- main flow --------
 def evaluate_players(input_csv, output_csv):
     df = pd.read_csv(input_csv)
+    
+    # Normalize identity + compute basic rate stats
     df = normalize_player_name(df)
     df = compute_rate_stats(df)
 
@@ -170,12 +188,15 @@ def evaluate_players(input_csv, output_csv):
     df["PerformanceMetric"] = compute_performance_raw(df)
     df["UsageMetric"] = compute_usage_raw(df)
 
-    df["CombinedMetric"] = (bw.performance_weighting_percent * df["PerformanceMetric"] + (1.0 - bw.performance_weighting_percent) * df["UsageMetric"])
+    # Weighted blend of performance + usage
+    df["CombinedMetric"] = (
+        bw.performance_weighting_percent * df["PerformanceMetric"]
+        + (1.0 - bw.performance_weighting_percent) * df["UsageMetric"]
+    )
 
     # Round metrics moderately for CSV cleanliness (you can remove rounding if you want full precision)
-    df["PerformanceMetric"] = df["PerformanceMetric"].round(6)
-    df["UsageMetric"] = df["UsageMetric"].round(6)
-    df["CombinedMetric"] = df["CombinedMetric"].round(6)
+    df[["PerformanceMetric", "UsageMetric", "CombinedMetric"]] = \
+    df[["PerformanceMetric", "UsageMetric", "CombinedMetric"]].round(6)
 
     # Build the requested output columns in order; create missing ones as NaN
     out_cols = ["Player", "B", "Age", "PO", "AB", "PerformanceMetric", "UsageMetric", "CombinedMetric"]
