@@ -141,7 +141,7 @@ function PredictionsPage() {
           fullWidth
           variant="outlined"
           size="small"
-          placeholder="Search by player name"
+          placeholder="Search by player or team name"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           sx={{ bgcolor: 'white' }}
