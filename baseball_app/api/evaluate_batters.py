@@ -121,7 +121,7 @@ def compute_performance_raw(df):
         # If it's a rate stat (AVG, OBP, SLG) we take it directly
         if col in ("AVG", "OBP", "SLG"):
             if col in df.columns:
-                perf += df[col].astype(float)perf += pd.to_numeric(df[col], errors="coerce").fillna(0.0) * float(weight)* float(weight)
+                perf += pd.to_numeric(df[col], errors="coerce").fillna(0.0) * float(weight)
         else:
             # For counting stats, convert to per-PA rate to avoid opportunity bias
             if col in df.columns:
