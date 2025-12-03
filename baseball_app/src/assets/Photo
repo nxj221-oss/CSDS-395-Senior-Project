@@ -1,0 +1,17 @@
+import React from "react";
+import topHitters from "./assets/top_hitters.png";
+
+function MetricsPage() {
+  return (
+    <div>
+      <h2>Top Hitters Overview</h2>
+      <img
+        src={topHitters}
+        alt="Top Hitters Table"
+        style={{ width: "100%", borderRadius: "10px" }}
+      />
+    </div>
+  );
+}
+
+export default MetricsPage;
