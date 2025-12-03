@@ -16,7 +16,7 @@
 # we will need to knit the tables together so that each team has one table with all positions instead of
 # many tables with one position
 
-
+'''
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -104,3 +104,105 @@ if __name__ == "__main__":
 
     collect_data(sys.argv[1], sys.argv[2])
 
+'''
+
+import os
+import sys
+import pandas as pd
+
+org_to_id = {
+    "los-angeles-angels": 1,
+    "baltimore-orioles": 2,
+    "boston-red-sox": 3,
+    "chicago-white-sox": 4,
+    "cleveland-guardians": 5,
+    "detroit-tigers": 6,
+    "kansas-city-royals": 7,
+    "minnesota-twins": 8,
+    "new-york-yankees": 9,
+    "the-athletics": 10,
+    "seattle-mariners": 11,
+    "tampa-bay-rays": 12,
+    "texas-rangers": 13,
+    "toronto-blue-jays": 14,
+    "arizona-diamondbacks": 15,
+    "atlanta-braves": 16,
+    "chicago-cubs": 17,
+    "cincinnati-reds": 18,
+    "colorado-rockies": 19,
+    "miami-marlins": 20,
+    "houston-astros": 21,
+    "los-angeles-dodgers": 22,
+    "milwaukee-brewers": 23,
+    "washington-nationals": 24,
+    "new-york-mets": 25,
+    "philadelphia-phillies": 26,
+    "pittsburgh-pirates": 27,
+    "st.-louis-cardinals": 28,
+    "san-diego-padres": 29,
+    "san-francisco-giants": 30,
+}
+
+COLUMNS = [
+    "PlayerName", "Age", "PO", "PA", "AB", "R", "H",
+    "2B", "3B", "HR", "RBI", "BB", "SO", "SB", "CS",
+]
+
+LEVELS = [
+    (1, "AAA"),
+    (2, "AA"),
+    (3, "A+"),
+    (4, "A"),
+]
+
+URL_TEMPLATE = (
+    "https://www.fangraphs.com/api/leaders/minor-league/data"
+    "?pos={pos}&level={level}"
+    "&lg=2,4,5,6,7,8,9,10,11,14,12,13,15,16,17,18,30,32"
+    "&stats=bat&qual=50&type=0&team=all&season=2025&seasonEnd=2025"
+    "&org={org_id}&ind=0&splitTeam=false"
+)
+
+
+def fetch_level(team: str, pos: str, level: int, label: str) -> None:
+    """Fetch a single level for one org+position and save to CSV."""
+
+    org_id = org_to_id[team]
+    url = URL_TEMPLATE.format(pos=pos, level=level, org_id=org_id)
+
+    try:
+        df = pd.read_json(url)
+    except ValueError as e:
+        print(f"[{team} {label}] Error reading JSON: {e}", file=sys.stderr)
+        return
+
+    if df.empty:
+        print(f"[{team} {label}] No data returned.")
+        return
+
+    df = df.filter(COLUMNS, axis=1).rename(columns={"PlayerName": "Name"})
+
+    os.makedirs("scraped_data", exist_ok=True)
+    output_path = os.path.join("scraped_data", f"{team}-{label}.csv")
+    df.to_csv(output_path, index=False)
+    print(f"[{team} {label}] Saved {len(df)} rows -> {output_path}")
+
+
+def collect_data(team: str, pos: str) -> None:
+    if team not in org_to_id:
+        raise KeyError(f"Unknown team key '{team}'. "
+                       f"Valid keys: {', '.join(org_to_id.keys())}")
+
+    for level, label in LEVELS:
+        fetch_level(team, pos, level, label)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python scrapeFangraphs.py [location-team] [position]")
+        sys.exit(1)
+
+    team_arg = sys.argv[1]
+    pos_arg = sys.argv[2]
+
+    collect_data(team_arg, pos_arg)
