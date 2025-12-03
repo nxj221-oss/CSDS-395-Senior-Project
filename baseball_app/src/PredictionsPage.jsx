@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Box, Typography, Card, CardContent, TextField, InputAdornment, IconButton, Stack, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText, OutlinedInput } from '@mui/material';
+import { Box, Typography, Card, CardContent, TextField, InputAdornment, IconButton, Stack, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText, OutlinedInput, Button, Dialog, DialogTitle, DialogContent } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { DataGrid } from '@mui/x-data-grid';
@@ -29,6 +29,8 @@ function PredictionsPage() {
   const [selectedLevels, setSelectedLevels] = React.useState([]);
   const [selectedPositions, setSelectedPositions] = React.useState([]);
   const [rows, setRows] = React.useState([]);
+  const [selectedRowIds, setSelectedRowIds] = React.useState([]);
+  const [isCompareDialogOpen, setIsCompareDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     const timeoutId = setTimeout(() => setDebouncedSearch(searchInput), 250);
@@ -118,6 +120,11 @@ function PredictionsPage() {
         player: row.Player
       }));
   }, [filteredRows]);
+
+  const selectedPlayers = React.useMemo(
+    () => rows.filter((row) => selectedRowIds.includes(row.Player)),
+    [rows, selectedRowIds],
+  );
 
   return (
     <Box>
@@ -245,6 +252,57 @@ function PredictionsPage() {
         </FormControl>
       </Stack>
 
+      {/* Compare Players Button */}
+      <Box sx={{ mb: 2 }}>
+        <Button
+          variant="contained"
+          color="error"
+          disabled={selectedRowIds.length <= 1}
+          onClick={() => setIsCompareDialogOpen(true)}
+          sx={{
+            bgcolor: 'primary.main',
+            '&:hover': {
+              bgcolor: 'primary.dark',
+            },
+            '&.Mui-disabled': {
+              bgcolor: 'rgba(255, 255, 255, 0.25)',
+              color: 'rgba(255, 255, 255, 0.6)',
+            },
+          }}
+        >
+          Compare Players
+        </Button>
+      </Box>
+      <Dialog
+        open={isCompareDialogOpen}
+        onClose={() => setIsCompareDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Compare Players</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+            {selectedPlayers.map((player) => (
+              <Card key={player.Player} sx={{ minWidth: 220, flex: 1 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {player.Player}
+                  </Typography>
+                  <Typography variant="body2">Team: {player.team}</Typography>
+                  <Typography variant="body2">Level: {player.level}</Typography>
+                  <Typography variant="body2">Age: {player.Age}</Typography>
+                  <Typography variant="body2">Position: {player.PO}</Typography>
+                  <Typography variant="body2">AB: {player.AB}</Typography>
+                  <Typography variant="body2">Performance: {player.perf}</Typography>
+                  <Typography variant="body2">Usage: {player.use}</Typography>
+                  <Typography variant="body2">Combined: {player.combined}</Typography>
+                </CardContent>
+              </Card>
+            ))}
+          </Box>
+        </DialogContent>
+      </Dialog>
+
       <Card sx={{ mt: 3 }}>
         <CardContent>
           <Box sx={{ height: 500, width: '100%' }}>
@@ -252,6 +310,19 @@ function PredictionsPage() {
               rows={filteredRows}
               columns={columns}
               getRowId={(row) => row.Player}
+              onRowSelectionModelChange={(newSelection) => {
+                if (Array.isArray(newSelection)) {
+                  setSelectedRowIds(newSelection);
+                } else if (newSelection && Array.isArray(newSelection.ids)) {
+                  setSelectedRowIds(newSelection.ids);
+                } else if (newSelection && newSelection.ids && typeof newSelection.ids.forEach === 'function') {
+                  const ids = [];
+                  newSelection.ids.forEach((id) => ids.push(id));
+                  setSelectedRowIds(ids);
+                } else {
+                  setSelectedRowIds([]);
+                }
+              }}
               pageSize={10}
               rowsPerPageOptions={[5, 10, 25]}
               checkboxSelection
