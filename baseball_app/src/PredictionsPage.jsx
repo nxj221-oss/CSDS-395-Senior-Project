@@ -125,7 +125,7 @@ function PredictionsPage() {
         Predictions Explorer
       </Typography>
       <Typography variant="body1" sx={{ color: 'white', mb: 4 }}>
-        This page displays individual player predictions. You can filter, sort, and explore player-level data including team, age, and performance.
+        This page displays individual player predictions. You can filter, sort, and explore player-level data including team, age, level, and performance.
       </Typography>
 
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
@@ -266,7 +266,7 @@ function PredictionsPage() {
         </CardContent>
       </Card>
 
-      {/* Visualizations Section - NEW CODE STARTS HERE */}
+      {/* Visualizations Section */}
       <Typography variant="h4" sx={{ mt: 5, mb: 3 }}>
         Data Visualizations
       </Typography>

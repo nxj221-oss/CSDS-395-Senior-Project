@@ -14,7 +14,7 @@ function HomePage() {
             Getting Started
           </Typography>
           <Typography variant="body1">
-            MLB Prospects Homepage.
+            Welcome to the MLB Prospects Dashboard. Visit Metrics to learn how our model evaluates players, or head to Predictions to see the results.
           </Typography>
         </CardContent>
       </Card>
