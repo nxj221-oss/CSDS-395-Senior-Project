@@ -317,24 +317,6 @@ function PredictionsPage() {
           </CardContent>
         </Card>
 
-        {/* Team Distribution */}
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Top 10 Teams by Player Count
-            </Typography>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={teamDistribution} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="team" width={150} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#00C49F" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
         {/* Average Performance by Age */}
         <Card>
           <CardContent>
