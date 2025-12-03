@@ -128,15 +128,14 @@ def _get_ab_penalty_config_for_level(level):
     try:
         all_cfg = getattr(bw, "AB_PENALTY", {}) or {}
         lvl = _canonicalize_level(level) or "default"
+        
         if isinstance(all_cfg, dict):
-            if lvl in all_cfg:
-                cfg = all_cfg[lvl]
-            elif lvl.upper() in all_cfg:
-                cfg = all_cfg[lvl.upper()]
-            elif lvl.title() in all_cfg:
-                cfg = all_cfg[lvl.title()]
-            else:
-                cfg = all_cfg.get("default", {})
+            cfg = (
+                all_cfg.get(lvl)
+                or all_cfg.get(lvl.upper())
+                or all_cfg.get(lvl.title())
+                or all_cfg.get("default", {})
+            )
         else:
             cfg = {}
     except Exception:
@@ -196,19 +195,19 @@ def _get_age_penalty_config_for_level(level):
     try:
         all_cfg = getattr(bw, "AGE_PENALTY", {}) or {}
         lvl = _canonicalize_level(level) or "default"
+        
         if isinstance(all_cfg, dict):
-            if lvl in all_cfg:
-                cfg = all_cfg[lvl]
-            elif lvl.upper() in all_cfg:
-                cfg = all_cfg[lvl.upper()]
-            elif lvl.title() in all_cfg:
-                cfg = all_cfg[lvl.title()]
-            else:
-                cfg = all_cfg.get("default", {})
+            cfg = (
+                all_cfg.get(lvl)
+                or all_cfg.get(lvl.upper())
+                or all_cfg.get(lvl.title())
+                or all_cfg.get("default", {})
+            )
         else:
             cfg = {}
     except Exception:
         cfg = {}
+        
     return {
         "cutoff_age": float(cfg.get("cutoff_age", 33.0)),
         "rate": float(cfg.get("rate", cfg.get("penalty_rate", 0.5))),
@@ -257,13 +256,13 @@ def _get_age_to_level_cfg(level):
         lvl = _canonicalize_level(level)
         if not lvl:
             return None
-        # try common forms
-        if lvl in all_cfg:
-            return all_cfg[lvl]
-        if lvl.title() in all_cfg:
-            return all_cfg[lvl.title()]
-        if lvl.upper() in all_cfg:
-            return all_cfg[lvl.upper()]
+
+        cfg = (
+            all_cfg.get(lvl)
+            or all_cfg.get(lvl.upper())
+            or all_cfg.get(lvl.title())
+        )
+        return cfg
     except Exception:
         return None
     return None
@@ -316,14 +315,15 @@ def get_level_multiplier(level):
     try:
         lvl = _canonicalize_level(level) or "default"
         all_lvl = getattr(bw, "LEVEL_WEIGHTS", {}) or {}
-        if lvl in all_lvl:
-            val = all_lvl[lvl]
-        elif lvl.upper() in all_lvl:
-            val = all_lvl[lvl.upper()]
-        elif lvl.title() in all_lvl:
-            val = all_lvl[lvl.title()]
-        else:
-            val = all_lvl.get("default", 1.0)
+        if not isinstance(all_lvl, dict):
+            return 1.0
+
+        val = (
+            all_lvl.get(lvl)
+            or all_lvl.get(lvl.upper())
+            or all_lvl.get(lvl.title())
+            or all_lvl.get("default", 1.0)
+        )
         return float(val)
     except Exception:
         return 1.0
