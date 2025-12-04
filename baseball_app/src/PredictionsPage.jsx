@@ -4,7 +4,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { DataGrid } from '@mui/x-data-grid';
 import { BarChart, Bar, LineChart, Line, ScatterChart, Scatter, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
+import topHitter from './assets/top_hitter.png';
 const columns = [
   { field: 'rank', headerName: 'Rank', width: 50 },
   { field: 'Player', headerName: 'Player Name', width: 180 },
@@ -425,6 +425,24 @@ function PredictionsPage() {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Static Top Hitters image at the bottom */}
+      <Typography variant="h4" sx={{ mt: 5, mb: 2 }}>
+        Top Hitters Overview
+      </Typography>
+
+      <Card sx={{ mb: 4 }}>
+         <CardContent>
+           <Box sx={{ width: '100%', overflow: 'hidden' }}>
+             <Box
+               component="img"
+               src={topHitters}
+               alt="Fangraphs table"
+               sx={{ width: '100%', borderRadius: 2 }}
+              />
+             </Box>
+           </CardContent>
+        </Card>
     </Box>
   );
 }
