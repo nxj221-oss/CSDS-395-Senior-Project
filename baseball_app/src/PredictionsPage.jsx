@@ -436,7 +436,7 @@ function PredictionsPage() {
            <Box sx={{ width: '100%', overflow: 'hidden' }}>
              <Box
                component="img"
-               src={topHitters}
+               src={topHitter}
                alt="Fangraphs table"
                sx={{ width: '100%', borderRadius: 2 }}
               />
