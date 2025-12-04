@@ -428,7 +428,7 @@ function PredictionsPage() {
 
       {/* Static Top Hitters image at the bottom */}
       <Typography variant="h4" sx={{ mt: 5, mb: 2 }}>
-        Top Hitters Overview
+        Fangraphs 
       </Typography>
 
       <Card sx={{ mb: 4 }}>
