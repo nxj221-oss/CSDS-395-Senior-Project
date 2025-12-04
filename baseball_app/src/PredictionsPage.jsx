@@ -311,17 +311,18 @@ function PredictionsPage() {
               columns={columns}
               getRowId={(row) => row.Player}
               onRowSelectionModelChange={(newSelection) => {
-                if (Array.isArray(newSelection)) {
-                  setSelectedRowIds(newSelection);
-                } else if (newSelection && Array.isArray(newSelection.ids)) {
-                  setSelectedRowIds(newSelection.ids);
-                } else if (newSelection && newSelection.ids && typeof newSelection.ids.forEach === 'function') {
-                  const ids = [];
-                  newSelection.ids.forEach((id) => ids.push(id));
-                  setSelectedRowIds(ids);
-                } else {
+                if (!newSelection || !newSelection.ids) {
                   setSelectedRowIds([]);
+                  return;
                 }
+                const idsSet = newSelection.ids;
+                if (newSelection.type === 'include') {
+                  setSelectedRowIds(Array.from(idsSet));
+                  return;
+                }
+                const allIds = rows.map((r) => r.Player);
+                const selected = allIds.filter((id) => !idsSet.has(id));
+                setSelectedRowIds(selected);
               }}
               pageSize={10}
               rowsPerPageOptions={[5, 10, 25]}
